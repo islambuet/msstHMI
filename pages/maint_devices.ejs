@@ -1,0 +1,86 @@
+<div class="row mt-2">
+    <div class="col-12">
+        <table class="table table-sm table-bordered table-striped" id="table_motor">
+            <thead>
+            <tr>
+                <th style="width: 75px;">Device ID</th>
+                <th style="">Device name</th>
+                <th style="width: 92px;">Device type</th>
+                <th style="width: 150px;">IP Address</th>
+                <th style="width: 150px;">Status</th>
+            </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+    </div>
+</div>
+
+
+<footer id="footer" class="container-fluid">
+    <%- include('../components/maint_footer') %>
+</footer>
+<script>
+    /* global basic_info */
+    /* global ipcRenderer */
+    let dataTable = jQuery('#table_motor').DataTable({
+        dom: 'Bfrtip',
+        paging: false,
+        info: false,
+        buttons: [],
+        order: [[0, 'asc']],
+        "columns": [
+            { "orderable": true, className: "text-right" },
+            null,
+            { "orderable": false, className: "text-right" },
+            { "orderable": false },
+            { "orderable": false },
+        ],
+
+
+    });
+    function systemPageLoaded(){
+        //let currentUser=basic_info['currentUser'];
+        let motor_speed_unit = basic_info['hmiSettings']['motor_speed_unit'];
+        let devices = Object.values(basic_info['devices']);
+        devices.forEach(record => {
+            if(Number(record['gui_id']) > 0) {
+                dataTable.row.add([
+                    record['device_id'],
+                    record['device_name'],
+                    record['device_type'],
+                    record['ip_address'],
+                    '<span class="device-status" data-device-id="' + record['device_id'] + '" style="background-color: #9e9e9e; width: 12px;height: 12px; display: inline-flex"></span>'
+                ]);
+            }
+        })
+        dataTable.draw();
+
+
+        if(basic_info['connected']){
+            requestPageData();
+            setInterval(() => {requestPageData()}, 1000);
+        }
+    }
+    function requestPageData(){
+        let requestData=[
+            {'name':'device_states','params':{}}
+        ];
+        ipcRenderer.send("sendRequestToServer", "getMaintMotorData",{},requestData);
+    }
+    ipcRenderer.on("getMaintMotorData", function(e, jsonObject) {
+        let machine_id=jsonObject['params']['machine_id'];
+        let device_states=jsonObject['data']['device_states']
+        $('.device-status').each((index, elem) => {
+            let device_id=$(elem).attr('data-device-id');
+            if(device_states[machine_id+'_'+device_id]!=undefined){
+                if(device_states[machine_id+'_'+device_id]['state']==1){
+                    $(elem).css('background-color', "#4fe21f");
+                }
+                else{
+                    $(elem).css('background-color', "#f43f5e");
+                }
+            }
+        })
+    })
+
+</script>

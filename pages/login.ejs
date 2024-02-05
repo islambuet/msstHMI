@@ -1,0 +1,75 @@
+<div class="row">
+    <div class="col-lg-3"></div>
+    <div class="col-lg-6 pt-0 pb-0 pl-2 pr-2">
+        <div class="alert alert-warning" id="alert_message_container" style="display: none;">
+            <p class="mb-0" id="alert_message"></p>
+        </div>
+        <div class="card">
+            <div class="card-header text-center">
+                <h2>Login</h2>
+            </div>
+            <div class="card-body">
+
+                <form action="" method="">
+                    <div class="form-group row">
+                        <label for="username" class="col-md-4 col-form-label text-md-right">Username</label>
+                        <div class="col-md-6">
+                            <input type="text" id="username" class="form-control" name="username" required autofocus>
+                        </div>
+                    </div>
+                    <div class="form-group row">
+                        <label for="password" class="col-md-4 col-form-label text-md-right">Password</label>
+                        <div class="col-md-6">
+                            <input type="password" id="password" class="form-control" name="password" required>
+                        </div>
+                    </div>
+                    <div class="col-md-6 offset-md-4">
+                        <button type="button" class="btn btn-primary" id="button_login">Login</button>
+                        <button type="button" class="btn btn-primary" id="button_cancel">Cancel</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-3"></div>
+</div>
+<script>
+    /* global basic_info */
+    /* global ipcRenderer */
+    function systemPageLoaded(){
+    }
+    $(document).on('click','#button_cancel',function (event){
+        ipcRenderer.send("sendRequestToIpcMain", "changeMenu",{'currentMenu':{'file':'settings','title':'Settings','name':'settings','members':''}});
+    })
+    $(document).on('click','#button_login',function (event){
+        let username = $("#username").val().trim();
+        let password = $("#password").val();
+        let error_messages = [];
+        if(!basic_info['connected']){
+            error_messages.push(" - <b>Server is not connected</b>");
+        }
+        if(username == "") {
+            error_messages.push(" - <b>Please enter username</b>");
+        }
+        if(password == "") {
+            error_messages.push(" - <b>Please enter password</b>");
+        }
+        if(error_messages.length > 0) {
+            let error_message = error_messages.join("<br>");
+            $("#alert_message").html(error_message);
+            $("#alert_message_container").show();
+        }
+        else {
+            $("#alert_message_container").hide();
+            ipcRenderer.send("sendRequestToServer", "getLoginUser",{'username':username,'password':password},[]);
+        }
+
+    })
+    ipcRenderer.on("getLoginUser", function(e, jsonObject) {
+        if(!jsonObject['data']['status']){
+            let error_message = "<b>Please enter correct username and password</b>";
+            $("#alert_message").html(error_message);
+            $("#alert_message_container").show();
+        }
+    });
+</script>

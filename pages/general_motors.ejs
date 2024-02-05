@@ -1,0 +1,208 @@
+<div class="row">
+    <div class="col-12">
+        <%- include('../components/general/'+system_general_layout_no+'/general_motors.svg') %>
+        <%- include('../components/general/'+system_general_layout_no+'/common_html.ejs') %>
+        <div id="motor-details" class="position-absolute" style="width: 350px;height:225px;top:200px;left:750px; border: 2px solid #2780E3;border-radius: 10px;display: none;z-index: 2;background-color: white;">
+            <%- include('../components/general/general_motor_details') %>
+        </div>
+    </div>
+</div>
+<div class="row m-0">
+    <div class="col-lg-12 pt-0 pb-0 pl-2 pr-2 mt-2">
+        <%- include('../components/general/active_alarm_content') %>
+    </div>
+</div>
+<footer id="footer" class="container-fluid">
+    <%- include('../components/general/general_footer') %>
+</footer>
+<script src="components/general/general_functions.js"></script>
+<script>
+    /* global basic_info */
+    /* global ipcRenderer */
+    let motorIdForDetailsView=0;
+    let machine_mode=0;
+    function setMotorDetailsView(){
+        if(machine_mode!=1){
+            $('#motor-details #tr_speed').hide();
+            $('#motor-details #command_buttons_container').hide();
+            $('#motor-details').css('height','115px');
+        }
+        else{
+            $('#motor-details #tr_speed').show();
+            $('#motor-details #command_buttons_container').show();
+            $('#motor-details').css('height','225px');
+        }
+    }
+    function systemPageLoaded(){
+        if(!basic_info['hmiSettings']['general_show_production']){
+            $('#switch_legend_production').trigger('click')
+        }
+        $('[data-toggle="tooltip"]').tooltip();
+        setActiveAlarmSettings();//general_functions
+        setBinsLabel();//general_functions
+        setConveyorsLabel();//general_functions
+        setMotorsLabel();//general_functions
+
+        if(basic_info['hmiSettings']['motor_speed_unit']=='ft_min'){
+            $('#motor-details #label_speed_input_unit').html('ft/min')
+        }
+        else{
+            $('#motor-details #label_speed_input_unit').html('m/s')
+        }
+        $('.motor.cursor-pointer').on('click',function (){
+            let motors=basic_info['motors']
+            let motor_id=$(this).attr('motor-id');
+            motorIdForDetailsView=motor_id;
+            setMotorDetailsView();
+            $('#motor-details #speed_error').hide();
+            $('#motor-details #motor_name').html(motors[basic_info['selectedMachineId']+'_'+motor_id]['motor_name'])
+            $('#motor-details #location').html(motors[basic_info['selectedMachineId']+'_'+motor_id]['location'])
+            $('#motor-details #ip_address').html(motors[basic_info['selectedMachineId']+'_'+motor_id]['ip_address'])
+            $('#motor-details #current_speed').html('-')
+            $('#motor-details').show();
+
+        })
+        $('#motor-details #close').on('click',function (){
+            $('#motor-details').hide();
+        })
+        $('#motor-details  #button-motor-start').on('click',function (){
+            if(machine_mode==1){
+                let machine_id=basic_info['selectedMachineId'];
+                let motorInfo=basic_info['motors'][machine_id+'_'+motorIdForDetailsView];
+                let speed;
+                let speed_min;
+                let speed_max;
+                if(basic_info['hmiSettings']['motor_speed_unit']=='ft_min'){
+                    speed=$('#motor-details #speed').val()*5.08;
+                    speed_min=motorInfo['speed_min']/5.08;
+                    speed_max=motorInfo['speed_max']/5.08;
+                }
+                else{
+                    speed=$('#motor-details #speed').val()*1000;
+                    speed_min=motorInfo['speed_min']/1000;
+                    speed_max=motorInfo['speed_max']/1000;
+                }
+                speed=parseInt(speed);
+
+                if(speed<motorInfo['speed_min'] || speed>motorInfo['speed_max']){
+                    $('#motor-details #speed_max').text(speed_max.toFixed(2))
+                    $('#motor-details #speed_min').text(speed_min.toFixed(2))
+                    $('#motor-details #speed_error').show();
+                }
+                else{
+                    $('#motor-details #speed_error').hide();
+                    let params={
+                        'message_id':123,
+                        'device_id':(+motorIdForDetailsView + 100),
+                        'command':1,
+                        'parameter1':speed
+                    };
+                    ipcRenderer.send("sendRequestToServer", "forward_ape_message",params,[]);
+                }
+            }
+        })
+        $('#motor-details  #button-motor-stop').on('click',function (){
+            if(machine_mode==1) {
+                let params={
+                    'message_id':123,
+                    'device_id':(+motorIdForDetailsView + 100),
+                    'command':0,
+                    'parameter1':0
+                };
+                ipcRenderer.send("sendRequestToServer", "forward_ape_message",params,[]);
+            }
+        })
+
+        if(basic_info['connected']){
+            let requestData=[
+                {'name':'output_states','params':{}},
+            ];
+            ipcRenderer.send("sendRequestToServer", "getIoOutputStates",{},requestData);
+        }
+    }
+    ipcRenderer.on("getIoOutputStates", function(e, jsonObject) {
+        setTestButtonsStatus(jsonObject['data']['output_states']);
+        let requestData=[
+            {'name':'bin_states','params':{}},
+            {'name':'conveyor_states','params':{}},
+            {'name':'device_states','params':{}},
+            {'name':'input_states','params':{}},
+            {'name':'active_alarms','params':{}},
+            {'name':'statistics_counter','params':{'per_page':1}},
+            {'name':'statistics_oee','params':{'per_page':1}},
+            {'name':'machine_mode','params':{}},
+            {'name':'motors_current_speed','params':{}},
+        ];
+        ipcRenderer.send("sendRequestToServer", "getGeneralViewData",{},requestData);
+        setInterval(() => {
+            ipcRenderer.send("sendRequestToServer", "getGeneralViewData",{},requestData);
+        }, 1000);
+    })
+    ipcRenderer.on("getGeneralViewData", function(e, jsonObject) {
+        setActiveAlarms(jsonObject['data']['active_alarms']);//general_functions
+        setBinsStates(jsonObject['data']['bin_states']);//general_functions
+        setConveyorsStates(jsonObject['data']['conveyor_states']);//general_functions
+        setDoorsStates(jsonObject['data']['input_states']);//general_functions
+        setStatisticsCounter(jsonObject['data']['statistics_counter']['records']);//general_functions
+        setStatisticsOee(jsonObject['data']['statistics_oee']['records']);//general_functions
+
+        //setMotorStates
+        let machine_id=basic_info['selectedMachineId'];
+        let motors=basic_info['motors']
+        let inputs=basic_info['inputs'];
+        let device_states=jsonObject['data']['device_states']
+        let input_states=jsonObject['data']['input_states']
+        let motors_current_speed=jsonObject['data']['motors_current_speed']
+        let activeAlarmsStates={};
+        for(let i in jsonObject['data']['active_alarms']){
+            let activeAlarm=jsonObject['data']['active_alarms'][i];
+            activeAlarmsStates[machine_id+'_'+activeAlarm['alarm_id']+'_'+activeAlarm['alarm_type']]=1;
+        }
+        if(jsonObject['data']['machine_mode']!=machine_mode){
+            machine_mode=jsonObject['data']['machine_mode'];
+            setMotorDetailsView();
+        }
+        for(let key in motors){
+            let motor=motors[key]
+            let cnx_status='#fff';
+            let status='#e6e6e6';
+            let faulted_status='#fff';
+            if(motor['input_id']>0){
+                if(inputs[machine_id+'_'+motor['input_id']] !=undefined){
+                    if((input_states[machine_id+'_'+motor['input_id']]['state'])==inputs[machine_id+'_'+motor['input_id']]['active_state']){
+                        status='#27e22b';
+                        faulted_status='#27e22b';
+                    }
+                }
+            }
+            if(motor['alarm_id']>0){
+                if(activeAlarmsStates[machine_id+'_'+motor['alarm_id']+'_'+motor['alarm_type']] !=undefined){
+                    status='#f00';
+                    faulted_status='#f00';
+                }
+            }
+            if(motor['device_number']>0){
+                if(device_states[machine_id+'_'+motor['device_number']] !=undefined){
+                    if(device_states[[machine_id+'_'+motor['device_number']]]['state']==1){
+                        cnx_status='#27e22b';//connected
+                    }
+                    else{
+                        cnx_status='#f00';
+                        status='#f00';
+                    }
+                }
+            }
+            $('.motor[motor-id='+motor["motor_id"]+'] .status').css('fill',status);
+            if(motorIdForDetailsView==motor["motor_id"]){
+                if(basic_info['hmiSettings']['motor_speed_unit']=='ft_min'){
+                    $('#motor-details #current_speed').html((motors_current_speed[machine_id+'_'+motorIdForDetailsView]/5.08).toFixed(2)+ ' ft/min')
+                }
+                else{
+                    $('#motor-details #current_speed').html(motors_current_speed[machine_id+'_'+motorIdForDetailsView]/1000+ ' m/s')
+                }
+                $('#motor-details #cnx_status').css('fill',cnx_status);
+                $('#motor-details #faulted_status').css('fill',faulted_status);
+            }
+        }
+    })
+</script>

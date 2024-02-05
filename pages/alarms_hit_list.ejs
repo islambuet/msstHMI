@@ -1,0 +1,215 @@
+<div class="row">
+    <div class="col-lg-12" >
+        <h2 class="d-inline-block">Alarms Hit List</h2>
+        <img id="system_loading" style="display: none;" src="theme/images/loading.gif" alt="Loading">
+    </div>
+</div>
+<div class="row">
+    <div class="col-md-10">
+        <div class="alert alert-warning alert-dismissible fade show" id="alert_message_container" role="alert" style="display: none;">
+            <p class="mb-0" id="alert_message"></p>
+            <button type="button" class="close alert-close">
+                <span aria-hidden="true">&times;</span>
+            </button>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-3"><h5>From</h5></div>
+    <div class="col-md-3"><h5>To</h5></div>
+</div>
+<div class="row">
+    <div class="col-md-3">
+        <div class="row">
+            <div class="col-md-6 pr-0">
+                <input type="text" class="form-control" id="from_date" placeholder="From date">
+            </div>
+            <div class="col-md-3 pl-1 pr-0">
+                <select class="form-control" id="from_date_hour"></select>
+            </div>
+            <div class="col-md-3 pl-1 pr-0">
+                <select class="form-control" id="from_date_minute"></select>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="row">
+            <div class="col-md-6 pr-0">
+                <input type="text" class="form-control" id="to_date" placeholder="To date">
+            </div>
+            <div class="col-md-3 pl-1 pr-0">
+                <select class="form-control" id="to_date_hour"></select>
+            </div>
+            <div class="col-md-3 pl-1 pr-0">
+                <select class="form-control" id="to_date_minute"></select>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-2 pr-0">
+        <div class="row">
+            <div class="col-md-4 pr-0">
+                <button type="button" class="btn btn-primary" id="button_filter">Filter</button>
+            </div>
+        </div>
+    </div>
+</div>
+<div class="row mt-2">
+    <div class="col-12">
+        <table class="table table-sm table-bordered" id="table_datatable">
+            <thead>
+            <tr>
+                <th style="width:10%;">Timestamp</th>
+                <th style="width:10%;">No of Occurrences</th>
+                <th style="width:10%;">Duration</th>
+                <th style="width:10%;">Class</th>
+                <th style="width:10%;">Location</th>
+                <th style="width:20%;">Description</th>
+                <th >Variable Name</th>
+            </tr>
+            </thead>
+            <tbody></tbody>
+            <tfoot>
+            <tr>
+                <th>Timestamp</th>
+                <th>No of Occurrences</th>
+                <th>Duration</th>
+                <th>Class</th>
+                <th>Location</th>
+                <th>Description</th>
+                <th>Variable Name</th>
+            </tr>
+            </tfoot>
+        </table>
+    </div>
+</div>
+<div class="row mt-2">
+    <div class="col-12" id="pagination_container">
+    </div>
+</div>
+<script>
+    /* global basic_info */
+    /* global ipcRenderer */
+    /* global getPaginationHtml */
+    let dataTable= $('#table_datatable').DataTable({
+        //dom: 'Bifrtp',
+        dom: '<Bif>rtp',
+        paging: false,
+        // searching: false,
+        buttons: [
+            {
+                extend: 'csv',
+                fieldSeparator: ";",
+                text: 'Export'
+            }],
+        order:[[1,'desc']],
+        scrollY: 600,
+        "columns": [
+            null,
+            {className: "text-right"},
+            null,
+            null,
+            null,
+            { "orderable": false },
+            { "orderable": false },
+        ],
+
+    });
+    function systemPageLoaded(){
+        for (let i = 0; i < 24; i++) {
+            let option= '<option value="' +(i<10?'0':'')+ i + '">' + (i<10?'0':'')+i+ '</option>';
+            $("#from_date_hour").append(option);
+            $("#to_date_hour").append(option);
+        }
+        for (let i = 0; i < 60; i++) {
+            let option= '<option value="' +(i<10?'0':'')+ i + '">' + (i<10?'0':'')+i+ '</option>';
+            $("#from_date_minute").append(option);
+            $("#to_date_minute").append(option);
+        }
+        $("#from_date").datepicker({
+            autoclose: true,
+            format: 'mm-dd-yyyy',
+            orientation: "bottom right"
+        });
+        $("#to_date").datepicker({
+            autoclose: true,
+            format: 'mm-dd-yyyy',
+            orientation: "bottom right",
+        });
+        $('#from_date').datepicker('update', moment().subtract(6, 'days').format('MM-DD-YYYY'));
+        $('#button_filter').trigger('click')
+    }
+    $(document).on('click','#button_filter',function (event){
+        filterAlarm();
+    })
+
+    function filterAlarm(){
+        $("#alert_message_container").hide();
+        let from_timestamp = moment($('#from_date').val()+" "+$("#from_date_hour").val()+":"+$("#from_date_minute").val(), "MM-DD-YYYY HH:mm").unix();
+        let to_timestamp = moment($('#to_date').val()+" "+$("#to_date_hour").val()+":"+$("#to_date_minute").val(), "MM-DD-YYYY HH:mm").unix();
+        let requestData = [
+            {
+                'name': 'alarms_hit_list',
+                'params': {
+
+                }
+            },
+        ];
+        let error_message='';
+        if(Number.isInteger(from_timestamp)){
+            requestData[0]['params']['from_timestamp']=from_timestamp;
+            if($('#from_date').val()==''){
+                error_message+="No From Date Selected.";
+            }
+        }
+        else{
+            error_message+="Invalid From Date";
+        }
+        if(Number.isInteger(to_timestamp)){
+            requestData[0]['params']['to_timestamp']=to_timestamp;
+            if($('#to_date').val()==''){
+                error_message+="No To Date Selected.";
+            }
+        }
+
+        if(error_message==''){
+            if(basic_info['connected']) {
+                $('#system_loading').show()
+                dataTable.clear().search('').draw();
+                ipcRenderer.send("sendRequestToServer", "getAlarmsHitList", {}, requestData);
+            }
+            else{
+                $("#alert_message").html("<b>Server Not connected</b>");
+                $("#alert_message_container").show();
+            }
+        }
+        else{
+            $("#alert_message").html(error_message);
+            $("#alert_message_container").show();
+        }
+    }
+    ipcRenderer.on("getAlarmsHitList", function(e, jsonObject) {
+        $('#system_loading').hide()
+        let alarms=basic_info['alarms']
+        let active_alarms=jsonObject['data']['alarms_hit_list']['records']
+        let alarm_class_names = {"0" : "Error", "1" : "Warning", "2" : "Message"};
+        dataTable.clear().draw();
+        for(let key in active_alarms){
+            let record=active_alarms[key]
+            if(alarms[key]!=undefined){
+                dataTable.row.add([
+                    moment.unix(record['date_active_timestamp']).format("MMM D Y, H:mm:ss"),
+                    record['no_of_occurrences'],
+                    secondsToDhms(record['date_inactive_timestamp']-record['date_active_timestamp']),
+                    alarm_class_names[alarms[key]['alarm_class']],
+                    alarms[key]['location'],
+                    alarms[key]['description'],
+                    alarms[key]['variable_name']
+                ]);
+            }
+        }
+        dataTable.draw();
+
+
+    })
+</script>

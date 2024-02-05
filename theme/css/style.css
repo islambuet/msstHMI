@@ -1,0 +1,144 @@
+/*bootstrap overwrite*/
+h1, h2, h3, h4, h5, h6, .h1, .h2, .h3, .h4, .h5, .h6 {
+    font-weight: 300;
+}
+.table-striped > tbody > tr:nth-child(even) > td {
+    background-color: #bfdbfe;
+}
+.table-striped > thead > tr > th {
+    background-color: #e2e8f0;
+}
+/*header*/
+.container-fluid{
+    width: 1850px;
+}
+
+.menu,#menu_logout {
+    color: #2780E3;
+    background-color: #f8f9fa;
+}
+.menu:hover,#btn_logout:hover {
+    background-color: #dae0e5;
+}
+.menu.active{
+    color: #fff;
+    background-color: #2780E3;
+}
+/*header*/
+#system_content{
+    margin-bottom: 50px;
+}
+
+button.button-3d{
+    border: none;
+    padding: 5px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    outline: none !important;
+    box-shadow: 0 8px 4px darkslategray;
+    background-color: #27e22b;
+}
+button.button-3d:active {
+    /*background-color: #4d80ff;*/
+    box-shadow: 0 0 2px darkslategray;
+    transform: translateY(5px);
+}
+
+button.button-rectangle{
+    border-radius: 5%;
+    width: 115px;
+    font-size: 20px;
+    background-color: #4274D7;
+    color: #fff;
+}
+
+button.button-round{
+    height: 80px;
+    width: 80px;
+    border-radius: 50%;
+}
+
+footer {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 50px;
+    z-index: 1000;
+    background-color: white;
+}
+/*dataTable start*/
+.dt-buttons,.dataTables_info{
+    float: left;
+    margin-right: 10px;
+}
+.dataTables_filter{
+    float: right;
+}
+/*dataTable end*/
+/*switch start*/
+.switch {
+    position: relative;
+    display: inline-block;
+    width: 48px;
+    height: 24px;
+}
+.switch > input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+.switch > span {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #ccc;
+    -webkit-transition: .4s;
+    transition: .4s;
+}
+.switch > span:before {
+    position: absolute;
+    content: "";
+    height: 20px;
+    width: 20px;
+    left: 1px;
+    bottom: 2px;
+    background-color: white;
+    -webkit-transition: .4s;
+    transition: .4s;
+}
+
+.switch > input:checked + span {
+    background-color: #2196F3;
+}
+.switch > input:focus + span {
+    box-shadow: 0 0 1px #2196F3;
+}
+/*For click animation*/
+.switch > input:checked + span:before {
+    -webkit-transform: translateX(26px);
+    -ms-transform: translateX(26px);
+    transform: translateX(26px);
+}
+.switch.switch-round span {
+    border-radius: 15px;
+}
+.switch.switch-round span:before {
+    border-radius: 50%;
+}
+/*switch end*/
+/*bootstrap tooltip overwrite start*/
+.tooltip-inner{
+    max-width: 300px;
+    background-color: white;
+    color: black;
+    border:1px solid black;
+    border-radius: 5px;
+}
+.bs-tooltip-top .arrow::before{
+    border-top-color: black;
+}
+/*bootstrap tooltip overwrite end*/

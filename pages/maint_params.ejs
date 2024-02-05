@@ -1,0 +1,218 @@
+<div class="row mt-2">
+    <div class="col-12 text-center">
+        <div class="px-1 py-2 border border-light" style="display: inline-block;border-width: 4px !important;">
+            <span class="mr-2 px-2" id="site_name">--</span>
+            <span class="mr-2 px-2 " id="machine_name">--</span>
+            <span>Install Date: <span id="install_date">--</span></span>
+        </div>
+    </div>
+</div>
+<div class="row mt-2">
+    <div class="col-lg-6">
+        <h3>Threshold Parameters</h3>
+        <div style="display: block; overflow-y: auto; height: 238px">
+            <table class="table table-sm table-bordered table-striped" id="table_parameters_threshold" style="">
+                <thead>
+                <tr>
+                    <th style="width: 115px;">Parameter ID</th>
+                    <th>Description</th>
+                    <th style="width: 54px;">Value</th>
+                    <th style="width: 72px;">Unit</th>
+                    <th style="width: 228px;"></th>
+                </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+        </div>
+        <h3>Timeout Parameters</h3>
+        <div style="display: block; overflow-y: auto; height: 370px">
+            <table class="table table-sm table-bordered table-striped" id="table_parameters_timeout" style="">
+                <thead>
+                <tr>
+                    <th style="width: 115px;">Parameter ID</th>
+                    <th>Description</th>
+                    <th style="width: 54px;">Value</th>
+                    <th style="width: 72px;">Unit</th>
+                    <th style="width: 228px;"></th>
+                </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+        </div>
+    </div>
+    <div class="col-lg-6">
+        <h3>Barcode</h3>
+        <div style="display: block;">
+            <table class="table table-sm table-bordered table-striped" id="table_parameters_barcode" style="">
+                <thead>
+                <tr>
+                    <th style="width: 115px;">Parameter ID</th>
+                    <th>Description</th>
+                    <th style="width: 54px;">Value</th>
+                    <th style="width: 72px;">Unit</th>
+                    <th style="width: 228px;"></th>
+                </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+        </div>
+        <h4>Calibration</h4>
+        <table class="table table-sm table-bordered table-striped" style="">
+            <thead>
+            <tr>
+                <th></th>
+                <th style="text-align: right;width:22%">Power Turn Entry Pe</th>
+                <th style="text-align: right;width:22%">Reject Pe</th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr>
+                <td>Package 1</td>
+                <td data-counter-id="1" class="counter-value" style="text-align: right"></td>
+                <td data-counter-id="6" class="counter-value" style="text-align: right"></td>
+            </tr>
+            <tr>
+                <td>Package 2</td>
+                <td data-counter-id="2" class="counter-value" style="text-align: right"></td>
+                <td data-counter-id="7" class="counter-value" style="text-align: right"></td>
+            </tr>
+            <tr>
+                <td>Package 3</td>
+                <td data-counter-id="3" class="counter-value" style="text-align: right"></td>
+                <td data-counter-id="8" class="counter-value" style="text-align: right"></td>
+            </tr>
+            <tr>
+                <td>Package 4</td>
+                <td data-counter-id="4" class="counter-value" style="text-align: right"></td>
+                <td data-counter-id="9" class="counter-value" style="text-align: right"></td>
+            </tr>
+            </tbody>
+        </table>
+        <table class="table table-sm table-bordered table-striped" style="table-layout: fixed">
+            <tbody>
+            <tr>
+                <td>Power Turn Tracking Window</td>
+                <td style="text-align: right;width:22%"><span id="param_value_id_60" ></span><span id="param_unit_id_60"></span></td>
+                <td style="text-align: right;width:22%"><span id="param_value_id_61" ></span><span id="param_unit_id_61"></span></td>
+            </tr>
+            <tr>
+                <td>Reject Position</td>
+                <td style="text-align: right;width:22%"><span id="param_value_id_62" ></span><span id="param_unit_id_62"></span></td>
+                <td>&nbsp;</td>
+            </tr>
+            </tbody>
+        </table>
+        <div style="text-align: end;">
+            <button id="button_calibrate" class="button-device-command button-3d button-rectangle" style="display: none;" data-device-id="87" data-command="0" data-parameter1="0">Calibrate</button>
+        </div>
+        <h3>Singulator Parameters</h3>
+        <div style="display: block; overflow-y: auto; height: 370px">
+            <table class="table table-sm table-bordered table-striped" id="table_parameters_singulator" style="">
+                <thead>
+                <tr>
+                    <th style="width: 115px;">Parameter ID</th>
+                    <th>Description</th>
+                    <th style="width: 54px;">Value</th>
+                    <th style="width: 72px;">Unit</th>
+                    <th style="width: 228px;"></th>
+                </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+        </div>
+
+    </div>
+</div>
+
+
+<footer id="footer" class="container-fluid">
+    <%- include('../components/maint_footer') %>
+</footer>
+<script>
+    /* global basic_info */
+    /* global ipcRenderer */
+
+    function systemPageLoaded(){
+        if(basic_info['machines'][basic_info['selectedMachineId']]){
+            let machine=basic_info['machines'][basic_info['selectedMachineId']];
+            $('#site_name').text(machine['site_name']);
+            $('#machine_name').text(machine['machine_name']);
+            //$('#install_date').text(machine['install_at']);
+            $('#install_date').text(moment(machine['install_at']).format('MMM D Y, H:mm:ss'))
+        }
+        if(basic_info['currentUser']['role']==1){
+            $("#button_calibrate").show();
+        }
+        Object.values(basic_info['parameters']).forEach(item => {
+            let html='<tr>' +
+                '<td style="text-align: center">' + item['param_id'] + '</td>' +
+                '<td>' + item['description'] + '</td>' +
+                '<td style="text-align: right" id="param_value_id_'+item['param_id']+'">' + item['value'] + '</td>' +
+                '<td>' + item['unit'] + '</td>' +
+                '<td>'+
+                ((basic_info['currentUser']['role'] == 1 || basic_info['currentUser']['role'] == 2) ?
+                        '<div class="input-group">' +
+                        '<input id="input_send_set_param_command_'+item['param_id']+'" type="text" class="form-control integer_positive">' +
+                        '<div class="input-group-append">' +
+                        '<button data-param_id="'+item['param_id']+'" class="btn btn-primary btn-sm btn_send_set_param_command">change</button>' +
+                        '</div>' +
+                        '</div>':''
+                )+
+                '</td>' +
+                '</tr>';
+
+            if (item['param_id'] > 0 && item['param_id'] < 20) {
+                $('#table_parameters_threshold tbody').append(html)
+            }
+            else if (item['param_id'] >19 && item['param_id'] < 50) {
+                $('#table_parameters_timeout tbody').append(html)
+            }
+            else if (item['param_id'] ==50) {
+                $('#table_parameters_barcode tbody').append(html)
+            }
+            else if (item['param_id'] >99 && item['param_id'] < 110) {
+                $('#table_parameters_singulator tbody').append(html)
+            }
+
+            $('#param_unit_id_'+item['param_id']).text(item['unit'])
+
+        });
+        if(basic_info['connected']){
+            requestPageData();
+            setInterval(() => {requestPageData()}, 2000);
+        }
+    }
+    function requestPageData(){
+        let requestData=[
+            {'name':'parameters_value','params':{}},
+            {'name':'counters_current_value','params':{}},
+        ];
+        ipcRenderer.send("sendRequestToServer", "getMaintParamsData",{},requestData);
+    }
+    $(document).on('click','.btn_send_set_param_command',function (event){
+        let param_id=$(this).attr('data-param_id')
+        let value=$('#input_send_set_param_command_'+param_id).val();//not verifying number
+        let params={
+            'message_id':115,
+            'param_id':param_id,
+            'value':value
+        };
+        ipcRenderer.send("sendRequestToServer", "forward_ape_message",params,[]);
+    })
+    ipcRenderer.on("getMaintParamsData", function(e, jsonObject) {
+        let machine_id=jsonObject['params']['machine_id'];
+        for(let key in jsonObject['data']['parameters_value']){
+            let parameter_info=jsonObject['data']['parameters_value'][key];
+            $('#param_value_id_'+parameter_info['param_id']).text(parameter_info['value'])
+        }
+        let counterData=jsonObject['data']['counters_current_value'];
+        $('.counter-value').each((index, elem) => {
+            let counter_id=$(elem).attr('data-counter-id');
+            if(counterData[machine_id+'_'+counter_id]!=undefined){
+                $(elem).text(counterData[machine_id+'_'+counter_id])
+            }
+        })
+
+    })
+
+</script>

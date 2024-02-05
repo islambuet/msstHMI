@@ -1,0 +1,139 @@
+<div class="row mt-2">
+    <div class="col-lg-6">
+        <div class="row">
+            <div class="col-12" id="container_fansort" style="display: none;">
+                <button id="btn_fansort_disable" style="font-size: 14px;background-color: darkgray; display: none;" class="button-device-command button-3d button-rectangle" data-device-id="88" data-command="1" data-parameter1="0">Disable Fansort</button>
+                <button id="btn_fansort_enable" style="font-size: 14px;display: none;" class="button-device-command button-3d button-rectangle" data-device-id="88" data-command="0"data-parameter1="0">Enable Fansort</button>
+            </div>
+            <div class="col-12 mt-5" id="container_singulator" style="display: none">
+                <h3>Singulator</h3>
+                <button id="singulator-start" class="button-device-command button-3d button-rectangle" data-device-id="89" data-command="0" data-parameter1="0">Start</button>
+                <button id="singulator-stop" class="button-device-command button-3d button-rectangle" data-device-id="89" data-command="1" data-parameter1="0">Stop</button>
+            </div>
+            <div class="col-12 mt-5" id="container_gapper" style="display: none">
+                <h3>Gapper</h3>
+                <button id="gapper-start" class="button-device-command button-3d button-rectangle" data-device-id="89" data-command="2"data-parameter1="0">Start</button>
+                <button id="gapper-stop" class="button-device-command button-3d button-rectangle" data-device-id="89" data-command="3" data-parameter1="0">Stop</button>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-6">
+        <div class="row">
+            <div class="col-12">
+                <h4>Pe Rising Edge Counter</h4>
+                <table class="table table-sm table-bordered table-striped" style="table-layout: fixed">
+                    <thead>
+                    <tr>
+                        <th></th>
+                        <th style="width:22%;text-align: center;">Count</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr>
+                        <td>Incline Entry pe</td>
+                        <td data-counter-id="20" class="counter-value" style="text-align: right"></td>
+                    </tr>
+                    <tr>
+                        <td>Power Turn Entry Pe</td>
+                        <td data-counter-id="21" class="counter-value" style="text-align: right"></td>
+                    </tr>
+                    <tr>
+                        <td>Induct Pe</td>
+                        <td data-counter-id="22" class="counter-value" style="text-align: right"></td>
+                    </tr>
+                    <tr>
+                        <td>Sorter Exit Pe</td>
+                        <td data-counter-id="23" class="counter-value" style="text-align: right"></td>
+                    </tr>
+                    <tr>
+                        <td>Brushroller Jam Pe</td>
+                        <td data-counter-id="24" class="counter-value" style="text-align: right"></td>
+                    </tr>
+                    <tr>
+                        <td>Reject Pe</td>
+                        <td data-counter-id="25" class="counter-value" style="text-align: right"></td>
+                    </tr>
+                    </tbody>
+                </table>
+                <button style="font-size: 14px;" class="button-device-command button-3d button-rectangle" data-device-id="90" data-command="0" data-parameter1="0">Reset Counter</button>
+            </div>
+            <div class="col-12 mt-5">
+                <h4>Intralox S04 Timing</h4>
+                <table class="table table-sm table-bordered table-striped" style="table-layout: fixed">
+                    <thead>
+                    <tr>
+                        <th></th>
+                        <th style="width:22%;text-align: center;">Value(ms)</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr>
+                        <td>Min</td>
+                        <td data-counter-id="26" class="counter-value" style="text-align: right"></td>
+                    </tr>
+                    <tr>
+                        <td>Current</td>
+                        <td data-counter-id="27" class="counter-value" style="text-align: right"></td>
+                    </tr>
+                    <tr>
+                        <td>Max</td>
+                        <td data-counter-id="28" class="counter-value" style="text-align: right"></td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<footer id="footer" class="container-fluid">
+    <%- include('../components/maint_footer') %>
+</footer>
+<script>
+    /* global basic_info */
+    /* global ipcRenderer */
+
+    function systemPageLoaded(){
+        if(basic_info['currentUser']['role']==1){
+            $('#container_fansort').show()
+            $('#container_singulator').show()
+            $('#container_gapper').show()
+        }
+        if(basic_info['connected']){
+            requestPageData();
+            setInterval(() => {requestPageData()}, 2000);
+        }
+    }
+    function requestPageData(){
+        let requestData=[
+            {'name':'output_states','params':{}},
+            {'name':'counters_current_value','params':{}},
+        ];
+        ipcRenderer.send("sendRequestToServer", "getMaintSortData",{},requestData);
+    }
+    ipcRenderer.on("getMaintSortData", function(e, jsonObject) {
+        let machine_id=jsonObject['params']['machine_id'];
+        let counterData=jsonObject['data']['counters_current_value'];
+        $('.counter-value').each((index, elem) => {
+            let counter_id=$(elem).attr('data-counter-id');
+            if(counterData[machine_id+'_'+counter_id]!=undefined){
+                $(elem).text(counterData[machine_id+'_'+counter_id])
+            }
+        })
+
+        let output_states=jsonObject['data']['output_states'];
+        if(output_states[machine_id+"_52"] !=undefined){
+            if(output_states[machine_id+"_52"]['state']==1) {
+                $('#btn_fansort_enable').hide();
+                $("#btn_fansort_disable").show();
+            }
+            else{
+                $('#btn_fansort_enable').show();
+                $("#btn_fansort_disable").hide();
+            }
+        }
+
+    })
+
+</script>

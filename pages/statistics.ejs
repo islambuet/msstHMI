@@ -1,0 +1,535 @@
+<div class="row mt-2">
+    <div class="col-lg-3">
+        <select id="update_period" class="pt-2 pb-2 pl-2 pr-2" style="border:0;background-color: #f8f9fa; font-weight: bold; font-size: 12px;">
+            <option value="3">Every 3 minutes</option>
+            <option value="60">Hourly</option>
+        </select>
+    </div>
+</div>
+<div class="row mt-2">
+    <div class="col-lg-6" id="bcr-chart" style="height: 280px;">BCR Chart</div>
+    <div class="col-lg-6">
+        <div class="row">
+            <div class="col-lg-6">
+                <table class="table table-sm table-bordered" id="table_production">
+                    <thead>
+                    <tr>
+                        <th>Production <span id="production_start_time"></span></th>
+                        <th style="width: 40px"></th>
+                        <th style="width: 80px;"></th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    </tbody>
+                </table>
+            </div>
+            <div class="col-lg-6">
+                <table class="table table-sm table-bordered" id="table_scanner">
+                    <thead>
+                    <tr>
+                        <th>Scanner Summary</th>
+                        <th style="width: 40px"></th>
+                        <th style="width: 80px;"></th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    </tbody>
+                </table>
+                <button style="display: none" id="button_reset" class="button-device-command button-3d button-rectangle"
+                        data-device-id="86"
+                        data-command="0"
+                        data-parameter1="0">Reset
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+<div class="row">
+    <div class="col-lg-6">
+    </div>
+    <div class="col-lg-6">
+        <div class="form-check form-switch">
+            <input class="form-check-input" type="checkbox" role="switch" id="switch_pie_sc" checked>
+            <label class="form-check-label" for="switch_pie">Pie Chart</label>
+        </div>
+    </div>
+</div>
+<div class="row mt-2">
+    <div class="col-lg-6">
+        <div id="tput-chart" style="height: 406px;">TPUT Chart</div>
+    </div>
+    <div class="col-lg-6">
+        <div class="row">
+            <div class="col-lg-12" id="pie-chart" style="height: 408px;">PIE Chart</div>
+            <div class="col-lg-12" id="table_sc" style="display:none;overflow-y: auto; height: 406px">
+                <table class="table table-sm table-bordered table-v-scroll">
+                    <thead>
+                    <tr class="thead-row">
+                        <th>SC Summary</th>
+                        <th style="width: 40px"></th>
+                        <th style="width: 80px;"></th>
+                    </tr>
+                    </thead>
+                    <tbody>
+
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+<footer id="footer" class="container-fluid">
+    <%- include('../components/statistics_footer') %>
+</footer>
+<script>
+    /* global basic_info */
+    /* global ipcRenderer */
+    const Highcharts = require('highcharts/highstock')
+    require('highcharts/modules/exporting')(Highcharts);
+    require('highcharts/modules/export-data')(Highcharts);
+    let pie_chart = Highcharts.chart('pie-chart', {
+        chart: {
+            plotBackgroundColor: null,
+            plotBorderWidth: null,
+            plotShadow: false,
+            type: 'pie',
+            borderColor: '#D3D3D3',
+            borderWidth: 1
+        },
+        credits: {
+            enabled: false
+        },
+        title: {
+            text: 'Total Products: 0'
+        },
+        tooltip: {
+            pointFormat: '<b>{point.percentage:.1f}%</b>'
+        },
+        accessibility: {
+            point: {
+                valueSuffix: '%'
+            }
+        },
+        navigation: {
+            buttonOptions: {
+                enabled: false
+            }
+        },
+        legend: {
+            align: 'right',
+            verticalAlign: 'middle',
+            layout: 'vertical',
+            itemMarginBottom: 8,
+            symbolHeight: 12,
+            symbolWidth: 12,
+            symbolRadius: 0,
+            itemStyle: {
+                fontWeight: 'normal',
+                fontSize: '10px',
+                cursor: "pointer",
+                color: '#000'
+            }
+        },
+        plotOptions: {
+            pie: {
+                allowPointSelect: true,
+                cursor: 'pointer',
+                dataLabels: {
+                    enabled: true,
+                    format: '{point.percentage:.1f}'
+                },
+                showInLegend: true
+            }
+        },
+        series: [{
+            name: 'Sorting Codes',
+            colorByPoint: true,
+            data: []
+        }]
+    });
+    function systemPageLoaded(){
+        if(!basic_info['hmiSettings']['statistics_show_pie']){
+            $('#switch_pie_sc').trigger('click')
+        }
+        let currentUser=basic_info['currentUser'];
+        if (currentUser['role'] >0 && currentUser['role'] <4) {
+            $('#button_reset').show();
+        }
+        else{
+            $('#button_reset').show();
+        }
+        if(basic_info['connected']){
+            let requestData=[
+                {'name':'statistics_counter','params':{'per_page':1}},
+            ];
+            ipcRenderer.send("sendRequestToServer", "getStatisticsCounterLast",{},requestData);//send request now
+            setInterval(() => {
+                ipcRenderer.send("sendRequestToServer", "getStatisticsCounterLast",{},requestData);
+            }, 2000);
+        }
+    }
+    $('#switch_pie_sc').change(function () {
+        if ($(this).is(":checked")) {
+            $('#pie-chart').show();
+            $('#table_sc').hide();
+            ipcRenderer.send("sendRequestToIpcMain", "saveSettings",{'statistics_show_pie':1});
+        }
+        else {
+            $('#pie-chart').hide();
+            $('#table_sc').show();
+            ipcRenderer.send("sendRequestToIpcMain", "saveSettings",{'statistics_show_pie':0});
+        }
+    });
+
+
+    ipcRenderer.on("getStatisticsCounterLast", function(e, jsonObject) {
+        if(jsonObject['data']['statistics_counter']['records'].length>0){
+            let shiftInfo=jsonObject['data']['statistics_counter']['records'][0];
+            let shift_starting_time = shiftInfo['created_at_timestamp'];
+            $('#table_production #production_start_time').text(`(started from ${moment(shift_starting_time * 1000).format('MMM D Y, HH:mm:ss')})`);
+            let scs_data=[];
+            let machine_errors = 0, non_machine_errors = 0,total_scs_count=0;
+            for(let key in basic_info['scs'])
+            {
+                let sc=basic_info['scs'][key];
+                if(sc['error_type']==1){
+                    machine_errors += Number(shiftInfo['sc'+sc['value']]);
+                }
+                else if(sc['error_type']==2){
+                    non_machine_errors += Number(shiftInfo['sc'+sc['value']]);
+                }
+                sc['count']=Number(shiftInfo['sc'+sc['value']]);
+                total_scs_count+=sc['count'];
+                scs_data.push(sc);
+            }
+            scs_data.sort(function(a, b){return ((a['error_type'] - b['error_type'])||(b['count'] - a['count']))});
+            $('#table_sc tbody').empty();
+            let pie_chart_data = [];
+            for(let i=0;i<scs_data.length;i++){
+                let html='<tr>' +
+                '<td>' + scs_data[i]['label'] + '</td>' +
+                '<td>' + scs_data[i]['count']+ '</td>' +
+                '<td>' + (total_scs_count>0?Number((scs_data[i]['count'] * 100 / total_scs_count).toFixed(1)):'0')+ '%' + '</td>' +
+                '</tr>';
+                $('#table_sc tbody').append(html)
+                pie_chart_data.push({
+                    name: scs_data[i]['label'],
+                    y: (total_scs_count>0?Number((scs_data[i]['count'] * 100 / total_scs_count).toFixed(1)):0),
+                    selected: (i==0),
+                    sliced: (i!=0),
+                    color: scs_data[i]['color']
+                });
+            }
+            pie_chart.series[0].setData(pie_chart_data, true);
+            pie_chart.setTitle({text: "Total Products: " + total_scs_count});
+
+            $('#table_production tbody').empty();
+            let production_data = {
+                total_read: {label: 'Total inducted', count: 0},
+                sc0: {label: 'Total good diverts', count: 0},
+                machine_error: {label: 'Total machine error packages', count: 0},
+                non_machine_error: {label: 'Total non-machine error packages', count: 0},
+                lost_comm: {label: 'Lost of communication', count: 0},
+                avg_length: {label: 'Avg. length', count: 0},
+                avg_gap: {label: 'Avg. gap', count: 0},
+            };
+            production_data['total_read']['count'] = shiftInfo['total_read'];
+            production_data['sc0']['count'] = shiftInfo['sc0'];
+            production_data['machine_error']['count'] = machine_errors;
+            production_data['non_machine_error']['count'] = non_machine_errors;
+            production_data['avg_length']['count'] = shiftInfo['total_good_length'] > 0 ?(shiftInfo['sum_length'] * 100 / shiftInfo['total_good_length']).toFixed(0) : 0;
+            production_data['avg_gap']['count'] = shiftInfo['total_good_gap'] > 0 ?(shiftInfo['sum_gap'] * 100 / shiftInfo['total_good_gap']).toFixed(0) : 0;
+
+            Object.keys(production_data).forEach(key => {
+                let html = '<tr>' + '<td>' + production_data[key]['label'] + '</td>' +
+                    '<td class="text-center">' + production_data[key]['count'] + '</td>' +
+                    '<td class="text-center">' + (shiftInfo['total_read'] > 0 ? (production_data[key]['count'] * 100 / shiftInfo['total_read']).toFixed(2) : 0) + '%' + '</td>'
+                    + '</tr>';
+                $('#table_production tbody').append(html)
+            });
+
+            $('#table_scanner tbody').empty();
+            let scanner_data = {
+                valid: {label: 'Good scan', count: 0},
+                no_read: {label: 'No read', count: 0},
+                no_code: {label: 'No code', count: 0},
+                multiple_read: {label: 'Multiple read', count: 0},
+                lost_comm: {label: 'Lost of communication', count: 0},
+            };
+            scanner_data['valid']['count'] = shiftInfo['valid']
+            scanner_data['no_read']['count'] = shiftInfo['no_read']
+            scanner_data['no_code']['count'] = shiftInfo['no_code']
+            scanner_data['multiple_read']['count'] = shiftInfo['multiple_read']
+            Object.keys(scanner_data).forEach(key => {
+                let html = '<tr>' + '<td>' + scanner_data[key]['label'] + '</td>' +
+                    '<td class="text-center">' + scanner_data[key]['count'] + '</td>' +
+                    '<td class="text-center">' + (shiftInfo['total_read'] > 0 ? (scanner_data[key]['count'] * 100 / shiftInfo['total_read']).toFixed(2) : 0) + '%' + '</td>'
+                    + '</tr>';
+                $('#table_scanner tbody').append(html)
+            });
+            let to_timestamp = moment().unix();
+            let from_timestamp = moment().subtract(24, 'hours').unix();
+            let diff = ($('#update_period').val()==60)?moment(shift_starting_time*1000).minutes():moment(shift_starting_time*1000).minutes() % 3;
+            let shift_starting_time_round = shift_starting_time - diff * 60- moment(shift_starting_time*1000).seconds();
+            if(from_timestamp<shift_starting_time_round){
+                from_timestamp=shift_starting_time_round;
+            }
+            //console.log(moment(from_timestamp * 1000).format('MMM D Y, HH:mm:ss'))
+            if($('#update_period').val()==60){
+                let requestData=[
+                    {'name':'statistics_hourly','params':{'from_timestamp': from_timestamp,'to_timestamp': to_timestamp}},
+                ];
+                ipcRenderer.send("sendRequestToServer", "getStatistics",{'update_period':60},requestData);//send request now
+            }
+            else{
+                let requestData=[
+                    {'name':'statistics','params':{'from_timestamp': from_timestamp,'to_timestamp': to_timestamp}},
+                    {'name':'statistics_minutely','params':{'from_timestamp': from_timestamp,'to_timestamp': to_timestamp}},
+                ];
+                ipcRenderer.send("sendRequestToServer", "getStatistics",{'update_period':3},requestData);//send request now
+            }
+        }
+    })
+    ipcRenderer.on("getStatistics", function(e, jsonObject) {
+        let update_period=jsonObject['params']['update_period'];
+        let bcr_chart_data = [], tput_chart_data = [], tput_minutely_chart_data = [];
+        let statistics_data=[],statistics_minutely_data=[];
+        if(update_period==60){
+            statistics_data=jsonObject['data']['statistics_hourly']['records']
+        }
+        else{
+            statistics_data=jsonObject['data']['statistics']['records']
+            statistics_minutely_data=jsonObject['data']['statistics_minutely']['records']
+        }
+        //60 or 3 min
+        for(let i=0;i<statistics_data.length;i++){
+            let time_slot = Number(statistics_data[i]['created_at_timestamp'])+3*60;
+            let total_read = Number(statistics_data[i]['total_read']);
+            let valid = Number(statistics_data[i]['valid']);
+            let bcr_read_rate = 0;
+            if (total_read > 0) {
+                bcr_read_rate = valid*100 / total_read;
+            }
+
+            bcr_chart_data.push({
+                x: time_slot*1000,
+                y: bcr_read_rate
+            });
+
+            let tput_value = (update_period == 60) ? total_read : total_read*20; // Tput = per hour total read
+            tput_chart_data.push({
+                x: time_slot,
+                y: tput_value
+            });
+        }
+        for(let i=0;i<statistics_minutely_data.length;i++){
+            let time_slot = Number(statistics_minutely_data[i]['created_at_timestamp'])+1*60;
+            let total_read = Number(statistics_minutely_data[i]['total_read']);
+            let tput_value =  total_read*60; // Tput = per hour total read
+            tput_minutely_chart_data.push({
+                x: time_slot,
+                y: tput_value
+            });
+        }
+        Highcharts.chart('bcr-chart', {
+            plotOptions: {
+                series: {
+                    animation: false
+                }
+            },
+            chart: {
+                type: 'spline',
+                animation: Highcharts.svg, // don't animate in old IE
+                marginRight: 10,
+                borderColor: '#D3D3D3',
+                borderWidth: 1
+            },
+
+            time: {
+                useUTC: false
+            },
+
+            title: {
+                text: 'BCR Read Rate'
+            },
+
+            accessibility: {
+                // announceNewData: {
+                //     enabled: true,
+                //     minAnnounceInterval: 15000,
+                //     announcementFormatter: function (allSeries, newSeries, newPoint) {
+                //         if (newPoint) {
+                //             return 'New point added. Value: ' + newPoint.y;
+                //         }
+                //         return false;
+                //     }
+                // }
+            },
+
+            xAxis: {
+                type: 'datetime',
+                tickInterval: 1000 * 60 * 60
+            },
+
+            yAxis: {
+                title: {
+                    text: null
+                },
+                tickInterval: 20,
+                tickWidth: 1,
+                tickLength: 5,
+                min: 0,
+                max: 100,
+                lineColor: '#C0C0C0',
+                lineWidth: 1,
+                plotLines: [{
+                    value: 0,
+                    width: 1,
+                    color: '#808080'
+                }]
+            },
+
+            tooltip: {
+                headerFormat: '<b>{series.name}</b><br/>',
+                pointFormat: 'Time:{point.x:%Y-%m-%d %H:%M}<br/>Rate:{point.y:.2f}%'
+            },
+
+            legend: {
+                enabled: true
+            },
+
+            exporting: {
+                enabled: true,
+                buttons: {
+                    contextButton: {
+                        menuItems: ['downloadCSV', 'separator', 'downloadPDF', 'downloadPNG']
+                    }
+                }
+            },
+
+            credits: {
+                enabled: false
+            },
+
+            colors: ['#38bdf8'],
+
+            series: [{
+                name: 'BCR Read Rate',
+                marker: {
+                    enabled: false
+                },
+                data: bcr_chart_data
+            }]
+        });
+        Highcharts.chart('tput-chart', {
+            plotOptions: {
+                series: {
+                    animation: false,
+                    turboThreshold: 0
+                }
+            },
+            chart: {
+                type: 'spline',
+                animation: Highcharts.svg, // don't animate in old IE
+                marginRight: 10,
+                borderColor: '#D3D3D3',
+                borderWidth: 1
+            },
+
+            time: {
+                useUTC: false
+            },
+
+            title: {
+                text: 'Tput'
+            },
+
+            accessibility: {
+                // announceNewData: {
+                //     enabled: true,
+                //     minAnnounceInterval: 15000,
+                //     announcementFormatter: function (allSeries, newSeries, newPoint) {
+                //         if (newPoint) {
+                //             return 'New point added. Value: ' + newPoint.y;
+                //         }
+                //         return false;
+                //     }
+                // }
+            },
+
+            xAxis: {
+                type: 'datetime',
+                tickInterval: 1000 * 60 * 60
+            },
+
+            yAxis: {
+                title: {
+                    text: null
+                },
+                labels: {
+                    format: '{value}'
+                },
+                tickInterval: 2000,
+                tickWidth: 1,
+                tickLength: 5,
+                min: 0,
+                max: 6000,
+                lineColor: '#C0C0C0',
+                lineWidth: 1,
+                plotLines: [{
+                    value: 0,
+                    width: 1,
+                    color: '#808080'
+                }]
+            },
+
+            tooltip: {
+                headerFormat: '<b>{series.name}</b><br/>',
+                pointFormat: '{point.x:%Y-%m-%d %H:%M:%S}<br/>{point.y:.2f}'
+            },
+
+            legend: {
+                enabled: true
+            },
+
+            exporting: {
+                enabled: true,
+                buttons: {
+                    contextButton: {
+                        menuItems: ['downloadCSV', 'separator', 'downloadPDF', 'downloadPNG']
+                    }
+                }
+            },
+
+            credits: {
+                enabled: false
+            },
+            colors: ['#38bdf8', '#fbbf24'],
+
+            series: (update_period == 60) ?
+                [{
+                    name: 'Tput-hourly',
+                    marker: {
+                        enabled: false
+                    },
+                    data: tput_chart_data
+                }]
+                : [
+                    {
+                        name: 'Tput-3-minutes',
+                        marker: {
+                            enabled: false
+                        },
+                        data: tput_chart_data
+                    },
+                    {
+                        name: 'Tput-per-minute',
+                        marker: {
+                            enabled: false
+                        },
+                        data: tput_minutely_chart_data
+                    },
+                ]
+        });
+    })
+</script>

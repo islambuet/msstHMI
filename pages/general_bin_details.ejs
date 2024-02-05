@@ -1,0 +1,172 @@
+<div class="row">
+    <div class="col-12 position-relative" style="padding:0 550px;text-align: center;">
+        <%- include('../components/general/general_bin_details.svg') %>
+        <div id="container-button-bin-manual" class="position-absolute" style="right: 950px;top:255px;z-index: 1;display: none;">
+            <button class="button-bin-command button-device-command button-3d button-round button-bin-manual mb-4" data-device-id="0" data-command="1" data-parameter1="0">Manual</button>
+        </div>
+        <div id="container-button-bin-auto" class="position-absolute" style="right: 950px;top:255px;z-index: 1;display: none;">
+            <button class="button-bin-command button-device-command button-3d button-round button-bin-auto mb-4"  data-device-id="0" data-command="2" data-parameter1="0">Auto</button>
+        </div>
+        <div id="container-button-bin-jog-raise" class="position-absolute" style="right: 400px;top:310px;z-index: 1;display: none;">
+            <button id="button-bin-jog-raise" class="button-bin-command button-3d button-rectangle mb-4" style="background-color: darkgray;" data-device-id="0" data-command-start="4" data-command-end="3" data-parameter1="0">Jog Raise</button>
+        </div>
+        <div id="container-button-bin-jog-lower" class="position-absolute" style="right: 400px;top:470px;z-index: 1;display: none;">
+            <button id="button-bin-jog-lower" class="button-bin-command button-3d button-rectangle mb-4" style="background-color: darkgray;" data-device-id="0" data-command-start="6" data-command-end="5" data-parameter1="0">Jog Lower</button>
+        </div>
+        <div id="container-button-bin-fault-reset" class="position-absolute" style="right: 970px;top:575px;z-index: 1;">
+            <button class="button-bin-command button-device-command button-3d button-rectangle button-bin-fault-reset mb-4" data-device-id="0" data-command="0" data-parameter1="0">Fault Reset</button>
+        </div>
+        <div id="container-button-bin-enable" class="position-absolute" style="right: 670px;top:575px;z-index: 1;display: none;">
+            <button class="button-bin-command button-device-command button-3d button-rectangle button-bin-enable mb-4" data-device-id="0" data-command="8" data-parameter1="0">Enable</button>
+        </div>
+        <div id="container-button-bin-disable" class="position-absolute" style="right: 670px;top:575px;z-index: 1;display: none;">
+            <button class="button-bin-command button-device-command button-3d button-rectangle button-bin-enable mb-4" style="background-color: darkgray;" data-device-id="0" data-command="7" data-parameter1="0">Disable</button>
+        </div>
+    </div>
+</div>
+
+<footer id="footer" class="container-fluid">
+    <%- include('../components/general/general_footer') %>
+</footer>
+<style>
+    #button-bin-jog-lower.down, #button-bin-jog-raise.down {
+        background-color: #4d80ff !important;
+    }
+</style>
+<script>
+    /* global basic_info */
+    /* global ipcRenderer */
+    let currentBinInfo={};
+    let currentBinInputs={};
+    function systemPageLoaded(){
+        currentBinInfo=basic_info['pageParams']['bin']
+        for(let input_key in basic_info['inputs']){
+            if((basic_info['inputs'][input_key]['machine_id']==currentBinInfo['machine_id']) &&(basic_info['inputs'][input_key]['device_number']==currentBinInfo['sort_manager_id'])
+                &&(basic_info['inputs'][input_key]['input_type']==0) &&(basic_info['inputs'][input_key]['device_type']==4)&&(basic_info['inputs'][input_key]['gui_id']>0))
+            {
+                currentBinInputs[input_key]=basic_info['inputs'][input_key];
+                $('.binDetails[gui-input-id='+currentBinInputs[input_key]['gui_id']+']')
+                    .attr('title',currentBinInputs[input_key]['description']+'<br>'+currentBinInputs[input_key]['electrical_name'])
+                    .attr('input-id',currentBinInputs[input_key]['input_id'])
+            }
+        }
+        $('.button-bin-command').attr('data-device-id',(200+(+currentBinInfo['bin_id'])))
+        $('[data-toggle="tooltip"]').tooltip();
+        $("#bin_label").text(currentBinInfo['bin_label'])
+
+        let requestData=[
+            {'name':'input_states','params':{}},
+            {'name':'bin_states','params':{}},
+        ];
+        if(basic_info['connected']) {
+            $('#button-bin-jog-raise,#button-bin-jog-lower').on('mousedown', function () {
+                let ele=$(this);
+                ele.addClass('down')
+                let device_id = $(this).attr('data-device-id');
+                let command_start = $(this).attr('data-command-start');
+                let command_end = $(this).attr('data-command-end');
+                let parameter1 = $(this).attr('data-parameter1');
+                let params={
+                    'message_id':123,
+                    'device_id':device_id,
+                    'command':command_start,
+                    'parameter1':parameter1
+                };
+                ipcRenderer.send("sendRequestToServer", "forward_ape_message",params,[]);
+
+
+                $(document).one('mouseup', function () {
+                    ele.removeClass('down')
+                    params={
+                        'message_id':123,
+                        'device_id':device_id,
+                        'command':command_end,
+                        'parameter1':parameter1
+                    };
+                    ipcRenderer.send("sendRequestToServer", "forward_ape_message",params,[]);
+                })
+            })
+            $('#button-bin-jog-raise,#button-bin-jog-lower').on('touchstart', function () {
+                let ele=$(this);
+                ele.addClass('down')
+                let device_id = $(this).attr('data-device-id');
+                let command_start = $(this).attr('data-command-start');
+                let command_end = $(this).attr('data-command-end');
+                let parameter1 = $(this).attr('data-parameter1');
+                let params={
+                    'message_id':123,
+                    'device_id':device_id,
+                    'command':command_start,
+                    'parameter1':parameter1
+                };
+                ipcRenderer.send("sendRequestToServer", "forward_ape_message",params,[]);
+                $(document).one('touchend', function () {
+                    ele.removeClass('down')
+                    params={
+                        'message_id':123,
+                        'device_id':device_id,
+                        'command':command_end,
+                        'parameter1':parameter1
+                    };
+                    ipcRenderer.send("sendRequestToServer", "forward_ape_message",params,[]);
+                })
+            })
+            ipcRenderer.send("sendRequestToServer", "getGeneralBinDetailsViewData", {}, requestData);
+            setInterval(() => {
+                ipcRenderer.send("sendRequestToServer", "getGeneralBinDetailsViewData", {}, requestData);
+            }, 1000);
+        }
+    }
+    ipcRenderer.on("getGeneralBinDetailsViewData", function(e, jsonObject) {
+        let bin_states=jsonObject['data']['bin_states'];
+
+        let inputsStates=jsonObject['data']['input_states'];
+        for(let key in currentBinInputs){
+            let currentBinInput=currentBinInputs[key];
+            let currentInputState=inputsStates[key];
+            let active_color=$('.binDetails[input-id='+currentBinInput["input_id"]+']').attr('active-color');
+            let inactive_color=$('.binDetails[input-id='+currentBinInput["input_id"]+']').attr('inactive-color');
+            $('.binDetails[input-id='+currentBinInput["input_id"]+'] .input_state').css('fill',(currentBinInput['active_state']==currentInputState['state'])?active_color:inactive_color);
+
+            if(currentBinInput['gui_id']=='110'){
+                if((basic_info['currentUser']['role']>0)&&(basic_info['currentUser']['role']<4))
+                {
+                    if(currentBinInput['active_state']==currentInputState['state']){//auto
+                        $('#container-button-bin-auto').hide();
+                        $('#container-button-bin-manual').show();
+                        $('#container-button-bin-jog-raise').hide();
+                        $('#container-button-bin-jog-lower').hide();
+                        $('#container-button-bin-disable').hide();
+                        $('#container-button-bin-enable').hide();
+                    }
+                    else{//manual
+                        $('#container-button-bin-auto').show();
+                        $('#container-button-bin-manual').hide();
+                        $('#container-button-bin-jog-raise').show();
+                        $('#container-button-bin-jog-lower').show();
+                        if(bin_states[basic_info['selectedMachineId']+"_"+currentBinInfo['bin_id']]['disabled']==1)
+                        {
+                            $('#container-button-bin-disable').hide();
+                            $('#container-button-bin-enable').show();
+                        }
+                        else{
+                            $('#container-button-bin-disable').show();
+                            $('#container-button-bin-enable').hide();
+                        }
+
+                    }
+                }
+                else{
+                    $('#container-button-bin-auto').hide();
+                    $('#container-button-bin-manual').hide();
+                    $('#container-button-bin-jog-raise').hide();
+                    $('#container-button-bin-jog-lower').hide();
+                    $('#container-button-bin-disable').hide();
+                    $('#container-button-bin-enable').hide();
+                }
+
+            }
+        }
+
+    })
+</script>

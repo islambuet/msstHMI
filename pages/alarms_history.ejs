@@ -1,0 +1,247 @@
+<div class="row">
+    <div class="col-lg-12" >
+        <h2 class="d-inline-block">Alarms History</h2>
+        <img id="system_loading" style="display: none;" src="theme/images/loading.gif" alt="Loading">
+    </div>
+</div>
+<div class="row">
+    <div class="col-md-10">
+        <div class="alert alert-warning alert-dismissible fade show" id="alert_message_container" role="alert" style="display: none;">
+            <p class="mb-0" id="alert_message"></p>
+            <button type="button" class="close alert-close">
+                <span aria-hidden="true">&times;</span>
+            </button>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-3"><h5>From</h5></div>
+    <div class="col-md-3"><h5>To</h5></div>
+</div>
+<div class="row">
+    <div class="col-md-3">
+        <div class="row">
+            <div class="col-md-6 pr-0">
+                <input type="text" class="form-control" id="from_date" placeholder="From date">
+            </div>
+            <div class="col-md-3 pl-1 pr-0">
+                <select class="form-control" id="from_date_hour"></select>
+            </div>
+            <div class="col-md-3 pl-1 pr-0">
+                <select class="form-control" id="from_date_minute"></select>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="row">
+            <div class="col-md-6 pr-0">
+                <input type="text" class="form-control" id="to_date" placeholder="To date">
+            </div>
+            <div class="col-md-3 pl-1 pr-0">
+                <select class="form-control" id="to_date_hour"></select>
+            </div>
+            <div class="col-md-3 pl-1 pr-0">
+                <select class="form-control" id="to_date_minute"></select>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-2 pr-0">
+        <div class="row">
+            <label class="col-md-4 col-form-label pr-0" for="per_page">No of rows</label>
+            <div class="col-md-4 pl-1 pr-0">
+                <select class="form-control" id="per_page">
+                    <option value="2">2</option>
+                    <option value="50">50</option>
+                    <option value="500">500</option>
+                    <option value="1000">1000</option>
+                    <option value="1500">1500</option>
+                    <option value="0">All</option>
+                </select>
+            </div>
+            <div class="col-md-4 pr-0">
+                <button type="button" class="btn btn-primary" id="button_filter">Filter</button>
+            </div>
+        </div>
+    </div>
+</div>
+<div class="row mt-2">
+    <div class="col-12">
+        <table class="table table-sm table-bordered" id="table_datatable">
+            <thead>
+            <tr>
+                <th style="width:20%;">Timestamp</th>
+                <th style="width:10%;">Duration</th>
+                <th style="width:10%;">Class</th>
+                <th style="width:10%;">Location</th>
+                <th style="width:20%;">Description</th>
+                <th style="width:20%;">Variable Name</th>
+            </tr>
+            </thead>
+            <tbody></tbody>
+            <tfoot>
+            <tr>
+                <th>Timestamp</th>
+                <th>Duration</th>
+                <th>Class</th>
+                <th>Location</th>
+                <th>Description</th>
+                <th>Variable Name</th>
+            </tr>
+            </tfoot>
+        </table>
+    </div>
+</div>
+<div class="row mt-2">
+    <div class="col-12" id="pagination_container">
+    </div>
+</div>
+<script>
+    /* global basic_info */
+    /* global ipcRenderer */
+    /* global getPaginationHtml */
+    let current_page=1;
+    let dataTable= $('#table_datatable').DataTable({
+        //dom: 'Bifrtp',
+        dom: '<Bif>rtp',
+        paging: false,
+        // searching: false,
+        buttons: [
+            {
+                extend: 'csv',
+                fieldSeparator: ";",
+                text: 'Export'
+            }],
+        // order:[[3,'asc']],
+        order:[],//no ordering default was first column
+        scrollY: 600,
+        "columns": [
+            null,
+            { "orderable": false },
+            null,
+            null,
+            { "orderable": false },
+            { "orderable": false },
+        ]
+
+    });
+    function systemPageLoaded(){
+        for (let i = 0; i < 24; i++) {
+            let option= '<option value="' +(i<10?'0':'')+ i + '">' + (i<10?'0':'')+i+ '</option>';
+            $("#from_date_hour").append(option);
+            $("#to_date_hour").append(option);
+        }
+        for (let i = 0; i < 60; i++) {
+            let option= '<option value="' +(i<10?'0':'')+ i + '">' + (i<10?'0':'')+i+ '</option>';
+            $("#from_date_minute").append(option);
+            $("#to_date_minute").append(option);
+        }
+        $("#from_date").datepicker({
+            autoclose: true,
+            format: 'mm-dd-yyyy',
+            orientation: "bottom right"
+        });
+        $("#to_date").datepicker({
+            autoclose: true,
+            format: 'mm-dd-yyyy',
+            orientation: "bottom right",
+        });
+        $('#from_date').datepicker('update', moment().subtract(6, 'days').format('MM-DD-YYYY'));
+        $('#button_filter').trigger('click')
+    }
+    $(document).on('change','#per_page',function (event){
+        current_page=1;
+        filterAlarm();
+    })
+    $(document).on('click','#button_filter',function (event){
+        current_page=1;
+        filterAlarm();
+    })
+    $(document).on('click','#pagination_container .page-item:not(".disabled")',function (event){
+        let page=$(this).attr('data-page')
+        if(page=='-' && current_page>1){
+            current_page--;
+        }
+        else if(page=='+'){
+            current_page++;
+        }
+        else
+        {
+            current_page=page;
+        }
+        filterAlarm();
+    })
+    function filterAlarm(){
+        $("#alert_message_container").hide();
+        let from_timestamp = moment($('#from_date').val()+" "+$("#from_date_hour").val()+":"+$("#from_date_minute").val(), "MM-DD-YYYY HH:mm").unix();
+        let to_timestamp = moment($('#to_date').val()+" "+$("#to_date_hour").val()+":"+$("#to_date_minute").val(), "MM-DD-YYYY HH:mm").unix();
+        let requestData = [
+            {
+                'name': 'alarms_history',
+                'params': {
+                    'per_page': $('#per_page').val(),
+                    "page": current_page
+                }
+            },
+        ];
+        let error_message='';
+        if(Number.isInteger(from_timestamp)){
+            requestData[0]['params']['from_timestamp']=from_timestamp;
+            if($('#from_date').val()==''){
+                error_message+="No From Date Selected.";
+            }
+        }
+        else{
+            error_message+="Invalid From Date";
+        }
+        if(Number.isInteger(to_timestamp)){
+            requestData[0]['params']['to_timestamp']=to_timestamp;
+            if($('#to_date').val()==''){
+                error_message+="No To Date Selected.";
+            }
+        }
+
+        if(error_message==''){
+            if(basic_info['connected']) {
+                $('#system_loading').show()
+                dataTable.clear().search('').draw();
+                ipcRenderer.send("sendRequestToServer", "getAlarmsHistory", {}, requestData);
+            }
+            else{
+                $("#alert_message").html("<b>Server Not connected</b>");
+                $("#alert_message_container").show();
+            }
+        }
+        else{
+            $("#alert_message").html(error_message);
+            $("#alert_message_container").show();
+        }
+    }
+    ipcRenderer.on("getAlarmsHistory", function(e, jsonObject) {
+        $('#system_loading').hide()
+        let machine_id=jsonObject['params']['machine_id'];
+        let active_alarms=jsonObject['data']['alarms_history']['records']
+        let alarms=basic_info['alarms']
+        let alarm_class_names = {"0" : "Error", "1" : "Warning", "2" : "Message"};
+        active_alarms.forEach(record => {
+            let key=machine_id+'_'+record['alarm_id']+'_'+record['alarm_type'];
+            if(alarms[key]!=undefined){
+                dataTable.row.add([
+                    moment.unix(record['date_active_timestamp']).format("MMM D Y, H:mm:ss"),
+                    secondsToDhms(record['date_inactive_timestamp']-record['date_active_timestamp']),
+                    alarm_class_names[alarms[key]['alarm_class']],
+                    alarms[key]['location'],
+                    alarms[key]['description'],
+                    alarms[key]['variable_name']
+                ]);
+            }
+        })
+        dataTable.draw();
+        let params=jsonObject['data']['alarms_history']['params'];
+        let totalRecords=jsonObject['data']['alarms_history']['totalRecords'];
+        $('#pagination_container').html(getPaginationHtml(totalRecords,params['per_page'],params['page']))
+
+        $('#table_datatable_info').html('Showing '+((params['page']-1) * params['per_page']+1)+' to '+((params['page']* params['per_page'])>totalRecords?totalRecords:(params['page']* params['per_page']))+' of '+totalRecords+' entries');
+
+    })
+</script>

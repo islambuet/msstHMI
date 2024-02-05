@@ -1,0 +1,63 @@
+<div class="row">
+    <div class="col-12">
+        <%- include('../components/general/'+system_general_layout_no+'/general_devices.svg') %>
+        <%- include('../components/general/'+system_general_layout_no+'/common_html.ejs') %>
+    </div>
+</div>
+<div class="row m-0">
+    <div class="col-lg-12 pt-0 pb-0 pl-2 pr-2 mt-2">
+        <%- include('../components/general/active_alarm_content') %>
+    </div>
+</div>
+<footer id="footer" class="container-fluid">
+    <%- include('../components/general/general_footer') %>
+</footer>
+<script src="components/general/general_functions.js"></script>
+<script>
+    /* global basic_info */
+    /* global ipcRenderer */
+    function systemPageLoaded(){
+        if(!basic_info['hmiSettings']['general_show_production']){
+            $('#switch_legend_production').trigger('click')
+        }
+        $('[data-toggle="tooltip"]').tooltip();
+        setActiveAlarmSettings();//general_functions
+        setBinsLabel();//general_functions
+        setConveyorsLabel();//general_functions
+        setDevicesLabel();//general_functions
+        setEstopsLabel();//general_functions
+
+        if(basic_info['connected']){
+            let requestData=[
+                {'name':'output_states','params':{}},
+            ];
+            ipcRenderer.send("sendRequestToServer", "getIoOutputStates",{},requestData);
+        }
+    }
+    ipcRenderer.on("getIoOutputStates", function(e, jsonObject) {
+        setTestButtonsStatus(jsonObject['data']['output_states']);
+        let requestData=[
+            {'name':'bin_states','params':{}},
+            {'name':'conveyor_states','params':{}},
+            {'name':'device_states','params':{}},
+            {'name':'input_states','params':{}},
+            {'name':'active_alarms','params':{}},
+            {'name':'statistics_counter','params':{'per_page':1}},
+            {'name':'statistics_oee','params':{'per_page':1}},
+        ];
+        ipcRenderer.send("sendRequestToServer", "getGeneralViewData",{},requestData);
+        setInterval(() => {
+            ipcRenderer.send("sendRequestToServer", "getGeneralViewData",{},requestData);
+        }, 1000);
+    })
+    ipcRenderer.on("getGeneralViewData", function(e, jsonObject) {
+        setActiveAlarms(jsonObject['data']['active_alarms']);//general_functions
+        setBinsStates(jsonObject['data']['bin_states']);//general_functions
+        setConveyorsStates(jsonObject['data']['conveyor_states']);//general_functions
+        setDevicesStates(jsonObject['data']['device_states']);//general_functions
+        setDoorsStates(jsonObject['data']['input_states']);//general_functions
+        setEstopsStates(jsonObject['data']['input_states']);//general_functions
+        setStatisticsCounter(jsonObject['data']['statistics_counter']['records']);//general_functions
+        setStatisticsOee(jsonObject['data']['statistics_oee']['records']);//general_functions
+    })
+</script>

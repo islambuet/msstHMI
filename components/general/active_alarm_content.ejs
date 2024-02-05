@@ -1,0 +1,42 @@
+<table class="table table-sm table-bordered" id="table_active_alarms">
+    <thead>
+    <tr>
+        <th style="width:20%">Timestamp</th>
+        <th style="width:10%">Duration</th>
+        <th style="width:10%">Class</th>
+        <th style="width:10%">Location</th>
+        <th style="width:20%">Description</th>
+        <th style="width:20%">Variable Name</th>
+    </tr>
+    </thead>
+    <tbody>
+    <tr>
+        <td colspan="6">No active alarm to display</td>
+    </tr>
+    </tbody>
+</table>
+<div class="row" id="container_ticker_active_alarms">
+    <div class="col-12">
+        <ul id="ticker_active_alarms"></ul>
+    </div>
+</div>
+<style>
+
+    #ticker_active_alarms {
+        max-width: 100%;
+        margin: auto;
+    }
+
+    #ticker_active_alarms li {
+        height: 100px;
+        padding: 10px;
+        list-style: none;
+        text-align: center;
+        font-size: 3.6em;
+    }
+
+    #ticker_active_alarms li.ticker-single-item {
+        height: 200px;
+        line-height: 200px;
+    }
+</style>

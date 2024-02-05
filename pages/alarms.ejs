@@ -1,0 +1,103 @@
+<div class="row mt-2">
+    <div class="col-1"><h2>Alarms</h2></div>
+    <div class="col-2">
+        <div class="form-check pt-2">
+            <input class="form-check-input" type="checkbox" id="chk_refresh_disable">
+            <label class="form-check-label" for="chk_refresh_disable">Disable Refresh</label>
+        </div>
+    </div>
+</div>
+<div class="row mt-2">
+    <div class="col-12">
+        <table class="table table-sm table-bordered" id="table_datatable">
+            <thead>
+            <tr>
+                <th style="width:20%">Timestamp</th>
+                <th style="width:10%">Duration</th>
+                <th style="width:10%">Class</th>
+                <th style="width:10%">Location</th>
+                <th style="width:20%">Description</th>
+                <th style="width:20%">Variable Name</th>
+            </tr>
+            </thead>
+            <tbody>
+            </tbody>
+            <tfoot>
+            <tr>
+                <th>Timestamp</th>
+                <th>Duration</th>
+                <th>Class</th>
+                <th>Location</th>
+                <th>Description</th>
+                <th>Variable Name</th>
+            </tr>
+            </tfoot>
+        </table>
+    </div>
+</div>
+<script>
+    /* global basic_info */
+    /* global ipcRenderer */
+    /* global getPaginationHtml */
+    let dataTable= $('#table_datatable').DataTable({
+        //dom: 'Bifrtp',
+        dom: '<Bif>rtp',
+        paging: false,
+        //searching: false,
+        buttons: [
+            {
+                extend: 'csv',
+                fieldSeparator: ";",
+                text: 'Export'
+            }],
+        order:[],//no ordering default was first column
+        scrollY: 600,
+        "columns": [
+            null,
+            { "orderable": false },
+            null,
+            null,
+            { "orderable": false },
+            { "orderable": false },
+        ]
+    });
+    function systemPageLoaded(){
+        if(basic_info['connected']){
+            requestPageData();
+            setInterval(() => {requestPageData()}, 1000);
+        }
+    }
+    function requestPageData(){
+        if(!($('#chk_refresh_disable').is(":checked"))) {
+            let requestData=[
+                {'name':'active_alarms','params':{}},
+            ];
+            ipcRenderer.send("sendRequestToServer", "getAlarmsViewData",{},requestData);
+        }
+    }
+    ipcRenderer.on("getAlarmsViewData", function(e, jsonObject) {
+        let machine_id=jsonObject['params']['machine_id'];
+        let active_alarms=jsonObject['data']['active_alarms']
+        let alarms=basic_info['alarms']
+        let alarm_class_names = {"0" : "Error", "1" : "Warning", "2" : "Message"};
+
+        let now_timestamp=moment().unix();
+        dataTable.clear().draw();
+
+        active_alarms.forEach(record => {
+            let key=machine_id+'_'+record['alarm_id']+'_'+record['alarm_type'];
+            if(alarms[key]!=undefined){
+                dataTable.row.add([
+                    moment.unix(record['date_active_timestamp']).format("MMM D Y, H:mm:ss"),
+                    secondsToDhms(now_timestamp-record['date_active_timestamp']),
+                    alarm_class_names[alarms[key]['alarm_class']],
+                    alarms[key]['location'],
+                    alarms[key]['description'],
+                    alarms[key]['variable_name']
+                ]);
+            }
+
+        })
+        dataTable.draw();
+    })
+</script>

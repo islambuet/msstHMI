@@ -1,0 +1,433 @@
+<div class="row">
+    <div class="col-lg-12" >
+        <span style="font-size: 1.875rem">&nbsp;</span>
+        <img id="system_loading" style="display: none;" src="theme/images/loading.gif" alt="Loading">
+    </div>
+</div>
+<div class="row">
+    <div class="col-md-10">
+        <div class="alert alert-warning alert-dismissible fade show" id="alert_message_container" role="alert" style="display: none;">
+            <p class="mb-0" id="alert_message"></p>
+            <button type="button" class="close alert-close">
+                <span aria-hidden="true">&times;</span>
+            </button>
+        </div>
+    </div>
+</div>
+
+
+<div class="row">
+    <div class="col-md-3"><h5>From</h5></div>
+    <div class="col-md-3"><h5>To</h5></div>
+</div>
+<div class="row">
+    <div class="col-md-3">
+        <div class="row">
+            <div class="col-md-6 pr-0">
+                <input type="text" class="form-control" id="from_date" placeholder="From date">
+            </div>
+            <div class="col-md-3 pl-1 pr-0">
+                <select class="form-control" id="from_date_hour"></select>
+            </div>
+            <div class="col-md-3 pl-1 pr-0">
+                <select class="form-control" id="from_date_minute"></select>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="row">
+            <div class="col-md-6 pr-0">
+                <input type="text" class="form-control" id="to_date" placeholder="To date">
+            </div>
+            <div class="col-md-3 pl-1 pr-0">
+                <select class="form-control" id="to_date_hour"></select>
+            </div>
+            <div class="col-md-3 pl-1 pr-0">
+                <select class="form-control" id="to_date_minute"></select>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-1 pr-0">
+        <button type="button" class="btn btn-primary form-control" id="button_filter">Filter</button>
+    </div>
+</div>
+
+<div class="d-flex justify-content-end align-items-center" style="padding: 0 40px; margin-left: auto">
+    <span class="mr-2">Detail</span>
+    <label class="switch m-0">
+        <input type="checkbox" id="switch-detail" checked>
+        <span class="slider round"></span>
+    </label>
+    <span class="ml-2">General</span>
+</div>
+<div class="row mt-2">
+    <div class="col-12" style="padding: 0 40px;text-align: center;height: 400px;display: none;" id="chart-volume">Hourly Volume</div>
+    <div class="col-12" style="padding: 0 40px;text-align: center;height: 400px;" id="chart-general">Hourly General</div>
+</div>
+<div class="row mt-2">
+    <div class="col-12">
+        <table class="table table-sm table-bordered" id="table_datatable">
+            <thead>
+            <tr>
+                <th>Date/Time</th>
+                <th>Scanner Reads</th>
+                <th>Scanner No Reads</th>
+                <th>% No Reads</th>
+                <th>Good diverts</th>
+                <th>Reject Count</th>
+                <th>Recirc Count</th>
+                <th>% Recirc</th>
+            </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+    </div>
+</div>
+<footer id="footer" class="container-fluid">
+    <%- include('../components/statistics_footer') %>
+</footer>
+
+<style>
+    .switch {
+        position: relative;
+        display: inline-block;
+        width: 48px;
+        height: 24px;
+    }
+    .switch input {
+        opacity: 0;
+        width: 0;
+        height: 0;
+    }
+
+    .slider {
+        position: absolute;
+        cursor: pointer;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background-color: #ccc;
+        -webkit-transition: .4s;
+        transition: .4s;
+    }
+
+    .slider:before {
+        position: absolute;
+        content: "";
+        height: 20px;
+        width: 20px;
+        left: 1px;
+        bottom: 2px;
+        background-color: white;
+        -webkit-transition: .4s;
+        transition: .4s;
+    }
+
+    input:checked + .slider {
+        background-color: #2196F3;
+    }
+
+    input:focus + .slider {
+        box-shadow: 0 0 1px #2196F3;
+    }
+
+    input:checked + .slider:before {
+        -webkit-transform: translateX(26px);
+        -ms-transform: translateX(26px);
+        transform: translateX(26px);
+    }
+
+     /*Rounded sliders*/
+    .slider.round {
+        border-radius: 34px;
+    }
+
+    .slider.round:before {
+        border-radius: 50%;
+    }
+</style>
+
+<script>
+    /* global basic_info */
+    /* global ipcRenderer */
+    /* global getPaginationHtml */
+    const Highcharts = require('highcharts/highstock')
+    require('highcharts/modules/exporting')(Highcharts);
+    require('highcharts/modules/export-data')(Highcharts);
+
+    function systemPageLoaded(){
+        $('#switch-detail').prop('checked', true);
+        for (let i = 0; i < 24; i++) {
+            let option= '<option value="' +(i<10?'0':'')+ i + '">' + (i<10?'0':'')+i+ '</option>';
+            $("#from_date_hour").append(option);
+            $("#to_date_hour").append(option);
+        }
+        for (let i = 0; i < 60; i++) {
+            let option= '<option value="' +(i<10?'0':'')+ i + '">' + (i<10?'0':'')+i+ '</option>';
+            $("#from_date_minute").append(option);
+            $("#to_date_minute").append(option);
+        }
+        $("#from_date").datepicker({
+            autoclose: true,
+            format: 'mm-dd-yyyy',
+            orientation: "bottom right"
+        });
+        $("#to_date").datepicker({
+            autoclose: true,
+            format: 'mm-dd-yyyy',
+            orientation: "bottom right",
+        });
+        if(basic_info['connected']){
+            let requestData=[
+                {'name':'statistics_counter','params':{'per_page':1}},
+            ];
+            ipcRenderer.send("sendRequestToServer", "getStatisticsCounterLast",{},requestData);//send request now
+        }
+    }
+    ipcRenderer.on("getStatisticsCounterLast", function(e, jsonObject) {
+        if(jsonObject['data']['statistics_counter']['records'].length>0){
+            let startDate=moment(jsonObject['data']['statistics_counter']['records'][0]['created_at_timestamp']*1000);
+            $('#from_date_hour').val((startDate.hour()<10?"0":"")+startDate.hour())
+            $('#from_date_minute').val((startDate.minute()<10?"0":"")+startDate.minute())
+            $('#from_date').datepicker('update', startDate.format('MM-DD-YYYY'));
+
+            let now=moment();
+            $('#to_date_hour').val((now.hour()<10?"0":"")+now.hour())
+            $('#to_date_minute').val((now.minute()<10?"0":"")+now.minute())
+            $('#to_date').datepicker('update', now.format('MM-DD-YYYY'));
+            current_page=1;
+            $('#button_filter').trigger('click')
+
+        }
+        else{
+            let error_message = "<b>Please Contact with admin. No Schedule found</b>";
+            $("#alert_message").html(error_message);
+            $("#alert_message_container").show();
+        }
+    })
+    ipcRenderer.on("getStatisticsHourly", function(e, jsonObject) {
+        $('#system_loading').hide()
+        console.log(jsonObject)
+        let statistics_data=jsonObject['data']['statistics_hourly']['records']
+        statistics_data.sort((a,b) => a['created_at_timestamp']-b['created_at_timestamp']);
+        let scs=basic_info['scs'];
+        for(let key in scs){
+            scs[key]['total']=0;
+            scs[key]['data']=[];
+        }
+        let chart_general_data = {
+            'sc0':{name: 'success', total: 0, data: [], color: '#34d399'},
+            'reject':{name: 'reject', total: 0, data: [], color: '#f43f5e'},
+            'recirc':{name: 'recirc', total: 0, data: [], color: '#f59e0b'},
+        };
+        let table_data=[]
+        let chart_categories = [];
+        for(let i=0;i<statistics_data.length;i++) {
+            let created_at_timestamp = statistics_data[i]["created_at_timestamp"];
+            chart_categories.push(moment.unix(created_at_timestamp).format("MMM D, H:mm"));
+            let table_datum={'created_at_timestamp':created_at_timestamp}
+            table_datum['total_read']=statistics_data[i]['total_read']
+            table_datum['no_read']=statistics_data[i]['no_read']
+            let reject=0;
+
+            for(let key in scs){
+                let value=Number(statistics_data[i]['sc'+scs[key]['value']]);
+                scs[key]['total']+=value;
+                scs[key]['data'].push(value)
+                if(scs[key]['value']==0){
+                    chart_general_data['sc0']['total']+=value;
+                    chart_general_data['sc0']['data'].push(value)
+                    table_datum['sc0']=value;
+                }
+                else{
+                    reject+=value;
+                }
+                //scs[key]['data']=[];
+            }
+            chart_general_data['reject']['total']+=reject;
+            chart_general_data['reject']['data'].push(reject)
+            table_datum['reject']=reject;
+
+            let recirc=Number(statistics_data[i]['recirc'])
+            chart_general_data['recirc']['total']+=recirc;
+            chart_general_data['recirc']['data'].push(recirc)
+            table_datum['recirc']=recirc;
+
+            table_data.push(table_datum)
+
+
+                // '<td>' + scs_data[i]['label'] + '</td>' +
+                // '<td>' + scs_data[i]['count']+ '</td>' +
+                // '<td>' + (total_scs_count>0?Number((scs_data[i]['count'] * 100 / total_scs_count).toFixed(1)):'0')+ '%' + '</td>' +
+        }
+
+        let chart_general_series=Object.values(chart_general_data).sort((a, b) => a.total - b.total);
+        //console.log(chart_general_series)
+        Highcharts.chart("chart-general", {
+            chart: {
+                type: "column",
+            },
+            title: {
+                text: "Hourly - General",
+            },
+            xAxis: {
+                type: "datetime",
+                categories: chart_categories,
+            },
+            yAxis: {
+                min: 0,
+                title: {
+                    text: "",
+                },
+            },
+            tooltip: {
+                formatter: function () {
+                    return '<b>' + moment(this.x).format("YYYY-MM-DD") + '</b><br/>' +
+                        this.series.name + ': ' + this.y + '<br/>' +
+                        'Total: ' + this.point.stackTotal;
+                }
+            },
+            legend: {
+                reversed: true,
+            },
+            plotOptions: {
+                series: {
+                    stacking: "normal",
+                    dataLabels: {
+                        enabled: true,
+                    },
+                },
+            },
+            exporting: {
+                enabled: true,
+                buttons: {
+                    contextButton: {
+                        menuItems: ['downloadCSV', 'separator', 'downloadPDF', 'downloadPNG']
+                    }
+                }
+            },
+            credits: {
+                enabled: false
+            },
+            series: chart_general_series.map((item) => ({
+                name: item['name'],
+                data: item['data'],
+                color: item['color']
+            })),
+        });
+
+        let chart_volume_series=Object.values(scs).sort((a, b) => a.total - b.total);
+        //console.log(chart_volume_series)
+        Highcharts.chart("chart-volume", {
+            chart: {
+                type: "column",
+            },
+            title: {
+                text: "Hourly - Detail",
+            },
+            xAxis: {
+                type: "datetime",
+                categories: chart_categories,
+            },
+            yAxis: {
+                min: 0,
+                title: {
+                    text: "",
+                },
+            },
+            tooltip: {
+                formatter: function () {
+                    return '<b>' + moment(this.x).format("YYYY-MM-DD") + '</b><br/>' +
+                        this.series.name + ': ' + this.y + '<br/>' +
+                        'Total: ' + this.point.stackTotal;
+                }
+            },
+            legend: {
+                reversed: true,
+            },
+            plotOptions: {
+                series: {
+                    stacking: "normal",
+                    dataLabels: {
+                        enabled: true,
+                    },
+                },
+            },
+            exporting: {
+                enabled: true,
+                buttons: {
+                    contextButton: {
+                        menuItems: ['downloadCSV', 'separator', 'downloadPDF', 'downloadPNG']
+                    }
+                }
+            },
+            credits: {
+                enabled: false
+            },
+            series: chart_volume_series.map((item) => ({
+                name: item['label'],
+                data: item['data'],
+                color: item['color']
+            })),
+        });
+        console.log(table_data)
+        table_data.sort((a,b)=> b['created_at_timestamp']-a['created_at_timestamp']);
+        $('#table_datatable tbody').empty();
+        for(let i=0;i<table_data.length;i++){
+            let html='<tr>' +
+                '<td>' + moment.unix(table_data[i]['created_at_timestamp']).format("MMM D, H:mm") + '</td>' +
+                '<td>' + table_data[i]['total_read'] + '</td>' +
+                '<td>' + table_data[i]['no_read'] + '</td>' +
+                '<td>' + (table_data[i]['total_read']>0?((table_data[i]['no_read']*100/table_data[i]['total_read']).toFixed(2)):'0.00') + '</td>' +
+                '<td>' + table_data[i]['sc0'] + '</td>' +
+                '<td>' + table_data[i]['reject'] + '</td>' +
+                '<td>' + table_data[i]['recirc'] + '</td>' +
+                '<td>' + (table_data[i]['total_read']>0?((table_data[i]['recirc']*100/table_data[i]['total_read']).toFixed(2)):'0.00') + '</td>' +
+                '</tr>';
+            $('#table_datatable tbody').append(html)
+        }
+    })
+
+    $(document).on('click','#button_filter',function (event){
+        $("#alert_message_container").hide();
+        let from_timestamp = moment($('#from_date').val()+" "+$("#from_date_hour").val()+":"+$("#from_date_minute").val(), "MM-DD-YYYY HH:mm").unix();
+        let to_timestamp = moment($('#to_date').val()+" "+$("#to_date_hour").val()+":"+$("#to_date_minute").val(), "MM-DD-YYYY HH:mm").unix();
+        if(Number.isInteger(from_timestamp) && Number.isInteger(to_timestamp)){
+            if(basic_info['connected']) {
+                let requestData = [
+                    {
+                        'name': 'statistics_hourly',
+                        'params': {
+                            'from_timestamp': from_timestamp,
+                            'to_timestamp': to_timestamp,
+                        }
+                    },
+                ];
+                $('#system_loading').show()
+                ipcRenderer.send("sendRequestToServer", "getStatisticsHourly", {}, requestData);
+            }
+            else{
+                let error_message = "<b>Server Not connected</b>";
+                $("#alert_message").html(error_message);
+                $("#alert_message_container").show();
+            }
+        }
+        else{
+            let error_message = "<b>Please select dates correctly</b>";
+            $("#alert_message").html(error_message);
+            $("#alert_message_container").show();
+        }
+    })
+    $('#switch-detail').change(function () {
+        if ($(this).is(":checked")) {
+            $('#chart-general').show();
+            $('#chart-volume').hide();
+        }
+        else {
+            $('#chart-general').hide();
+            $('#chart-volume').show();
+        }
+    });
+
+</script>

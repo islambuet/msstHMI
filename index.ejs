@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <meta name="viewport" content="width=device-width,initial-scale=1">
+        <title>ADTA</title>
+        <link rel="stylesheet" type="text/css" href="./theme/css/bootstrap.min.css">
+        <link rel="stylesheet" type="text/css" href="./theme/css/iconfont.css">
+        <link rel="stylesheet" type="text/css" href="./theme/css/icons_feather.min.css">
+        <link rel="stylesheet" type="text/css" href="./theme/css/palette-gradient.min.css">
+        <link rel="stylesheet" type="text/css" href="./theme/bootstrap-icons/bootstrap-icons.css">
+        <link rel="stylesheet" type="text/css" href="./theme/js/datepicker/bootstrap-datepicker.min.css">
+        <link rel="stylesheet" type="text/css" href="./theme/js/datatables/datatables.css">
+        <link rel="stylesheet" type="text/css" href="./theme/css/style.css">
+    </head>
+    <body class="container-fluid">
+
+    <script>window.$ = window.jQuery = require('jquery');</script>
+    <script type="text/javascript" src="./theme/js/popper.min.js"></script>
+    <script type="text/javascript" src="./theme/js/bootstrap.min.js"></script>
+    <script type="text/javascript" src="./theme/js/moment.min.js"></script>
+    <script type="text/javascript" src="./theme/js/datepicker/bootstrap-datepicker.min.js"></script>
+    <script type="text/javascript" src="./theme/js/datatables/datatables.js"></script>
+    <script type="text/javascript" src="./theme/js/jquery.newsTicker.js"></script>
+
+    <script type="text/javascript" src="./theme/js/site_info.js"></script>
+    <script type="text/javascript" src="./theme/js/global.js"></script>
+    <header id="header">
+        <div class="row">
+            <div class="position-relative col-12"  style="width: 100%;height: 60px;">
+                <div id="system_mode_buttons_container" style="display:none;">
+                    <button type="button" class="btn btn-primary position-absolute system_button_mode" data-mode="1" style="display:none;left: 150px;top:11px;">Activate manual mode</button>
+                    <button type="button" class="btn btn-primary position-absolute system_button_mode" data-mode="0" style="display:none;left: 150px;top:11px;background-color: #d3d3d3;border-color: #d3d3d3;">Deactivate manual mode</button>
+                </div>
+                <img class="position-absolute" style="right: 15px;top:18px;" src="theme/images/logo.png" height="24" >
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-lg-4">
+                <div class="row m-0">
+                    <div class="col-2 pl-0">
+                        <span class="badge badge-pill badge-light" id="system_display_date">xx/xx/xxxx</span>
+                        <span class="badge badge-pill badge-light" id="system_display_time">xx:xx:xx</span>
+                    </div>
+                    <div class="col-5 text-center">
+                            <div class="system_machine_info" data-selected="1" style="display: none;background-color: #f8f9fa;">
+                                <span class="badge badge-pill" id="system_machine_name">--</span><br>
+                                <span class="badge badge-pill" id="system_machine_ip_address">--</span>
+                            </div>
+                            <div class="system_machine_info" data-selected="0" style="line-height: 50px;display: block;background-color: #f8f9fa;">Select Machine</div>
+                    </div>
+                    <div class="col-3 text-center">
+                        <span class="badge badge-pill badge-light" style="padding:0;" >
+                            <select id="system_machine_list" style="border:0;background-color: #f8f9fa; font-weight: bold;">
+                                <option value="0">Select machine</option>
+                            </select>
+                        </span>
+                        <br>
+                        <span class="badge badge-pill badge-light" id="system_user_name">----</span>
+                    </div>
+                    <div class="col-2 text-center" id="system_machine_status" style="line-height: 50px;color: red;">&#11044;</div>
+                </div>
+            </div>
+            <div class="col-lg-8"  style="overflow: auto;">
+                <div style="display: flex;flex-wrap: nowrap;">
+                    <button class="btn menu mr-1" data-title="General View" data-file="general" data-name="general" data-members="general general_conveyors" id="menu_general">General&nbsp;View</button>
+                    <button class="btn menu mr-1" data-title="Alarms" data-file="alarms" data-name="alarms" data-members="alarms">Alarms</button>
+                    <button class="btn menu mr-1" data-title="Alarms History" data-file="alarms_history" data-name="alarms_history" data-members="alarms_history">Alarms History</button>
+                    <button class="btn menu mr-1" data-title="Alarms Hit List" data-file="alarms_hit_list" data-name="alarms_hit_list" data-members="alarms_hit_list">Alarms Hit List</button>
+                    <button class="btn menu mr-1" data-title="Statistics" data-file="statistics" data-name="statistics" data-members="statistics">statistics</button>
+                    <button class="btn menu mr-1" data-title="Token" data-file="token" data-name="token" data-members="token">Token</button>
+                    <button class="btn menu mr-1" data-title="Maint" data-file="maint" data-name="maint" data-members="maint maint_ios" id="menu_maint">Maint</button>
+                    <button class="btn menu mr-1" data-title="Login" data-file="login" data-name="login" data-members="login" id="menu_login">Login</button>
+                    <button class="btn mr-1" id="menu_logout">Logout</button>
+                </div>
+            </div>
+        </div>
+    </header>
+    <div id="system_content"><%- include('./pages/'+system_current_page_file) %></div>
+    </body>
+</html>
