@@ -1,1 +1,2 @@
-const version="ADTA 2.0.1 -- ";
+const systemSiteName="MSST";
+const systemVersion="1.0.1";

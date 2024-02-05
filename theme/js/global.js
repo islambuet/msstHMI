@@ -144,7 +144,7 @@ ipcRenderer.on("basic_info", function(e, data) {
     basic_info=data;
     //setting page title
     let currentMenu=basic_info['currentMenu'];
-    $('title').text(version+currentMenu['title'])
+    $('title').text(systemSiteName+" "+systemVersion+"--"+currentMenu['title'])
     //setting active menu
     let members=currentMenu['members'].split(" ");
     for(let i=0;i<members.length;i++){
@@ -204,6 +204,7 @@ ipcRenderer.on("basic_info", function(e, data) {
     }
 })
 ipcRenderer.on("getCommonStatus", function(e, jsonObject) {
+    console.log("TODO getCommonStatus")
     let disconnected_device_counter = Number(jsonObject['data']['disconnected_device_counter']);
     if(disconnected_device_counter != 0) {
         $("#system_machine_status").css("color", "#FFBF00");

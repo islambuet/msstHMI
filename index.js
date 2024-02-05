@@ -26,16 +26,15 @@ let loggerConfig={
 }
 log4js.configure(loggerConfig);
 logger.info("HMI Started.");
-
+let project_prefix='msst_';
 function getHMISettings(){
-    let project_prefix='adta_';
     return {
         'java_server_ip_address' : store.get(project_prefix+'java_server_ip_address', ''),
         'java_server_port' : store.get(project_prefix+'java_server_port', ''),
         'cm_ip_address' :  store.get(project_prefix+'cm_ip_address', ''),
-        'detailed_active_alarm' : store.get(project_prefix+'detailed_active_alarm', '0'),
+        'alarm_show_details' : store.get(project_prefix+'alarm_show_details', '0'),
         'motor_speed_unit' : store.get(project_prefix+'motor_speed_unit', 'm_s'),
-        'general_layout_no' : store.get(project_prefix+'general_layout_no', '2'),
+        'general_layout_no' : store.get(project_prefix+'general_layout_no', '1'),
         'general_show_production' : store.get(project_prefix+'general_show_production', '1'),
         'statistics_show_pie' : store.get(project_prefix+'statistics_show_pie', '1')
     };
@@ -49,6 +48,7 @@ let basic_info={
     'currentMenu':generalPage,
     'selectedMachineId':0,
     'pageParams':{},
+    'systemConstants':{},
     'hmiSettings':getHMISettings()
 }
 
@@ -133,12 +133,14 @@ function changeMenu(params){
 }
 function logoutUser() {
     mainWindow.closable=false;
-    let params={
-        'machine_id':basic_info['selectedMachineId'],
-        'message_id':120,
-        'mode':0
-    };
-    sendRequestToServer({"request" :'forward_ape_message','params':params,"requestData":[]});
+    //TODO start
+    // let params={
+    //     'machine_id':basic_info['selectedMachineId'],
+    //     'message_id':120,
+    //     'mode':0
+    // };
+    // sendRequestToServer({"request" :'forward_ape_message','params':params,"requestData":[]});
+    //TODO end
     basic_info['currentUser']=unRegisteredUser;
     menu = Menu.buildFromTemplate(getMenu());
     Menu.setApplicationMenu(menu);
@@ -169,16 +171,13 @@ ipcMain.on("sendRequestToIpcMain", function(e, responseName,params={}) {
         }
     }
     else if(responseName=='saveSettings'){
-        let project_prefix='adta_';
         for(let key in params){
             store.set(project_prefix+key, params[key]);
         }
         if(params['general_layout_no']!=undefined){
             ejse.data('system_general_layout_no',params['general_layout_no'])
         }
-        // //if needed to handle
         basic_info['hmiSettings']=getHMISettings();
-        // mainWindow.webContents.send('basicInfo',basicInfo);
     }
 
 })
@@ -188,8 +187,9 @@ function connectWithServer () {
     let host=basic_info['hmiSettings']['java_server_ip_address'];
     let port=basic_info['hmiSettings']['java_server_port'];
     console.log(new Date().toString(),":Connecting with Host="+host+" Port="+port);
-    logger.info("Connecting with Host="+host+" Port="+port);
+    //logger.info("Connecting with Host="+host+" Port="+port);
     if(!basic_info['connected'] && host && port && port>=0 && port<65536){
+        //The Socket.IO client will automatically try to reconnect after a small delay.
         clientSocket.connect(port, host);
     }
     else{//for incomplete settings
@@ -197,17 +197,17 @@ function connectWithServer () {
     }
 }
 function connectClientSocketHandler() {
-    logger.info("Connected with JavaServer");
+    logger.info("Connected with JavaServer.");
     basic_info['connected']=true;
     //immediate sending request does not receive by server
     setTimeout(function (){
-        sendRequestToServer({"request" :'basic_info','params':{},"requestData":[]});
+        sendRequestToServer({"request" :'getSystemConstants','params':{},"requestData":[]});
     }, 100);
 
 }
 function closeClientSocketHandler () {
     if(basic_info['connected']){
-        logger.error("DisConnected with JavaServer");
+        logger.error("DisConnected with JavaServer.");
         changeMenu({'connected':false,'selectedMachineId':0})//or only send disconnect event
     }
     setTimeout(connectWithServer, 2000);
@@ -218,13 +218,12 @@ function sendRequestToServer(requestJson){
             clientSocket.write('<begin>'+JSON.stringify(requestJson)+'</begin>');
         }
         catch(ex) {
-            logger.error("Data Sending Error.")
+            logger.error("Data Sending Error."+requestJson.toString())
             logger.error(ex)
         }
     }
     else{
-        logger.error("Not Connected with Java server.")
-
+        logger.error("Not Connected with Java server."+JSON.stringify(requestJson))
     }
 }
 
@@ -263,43 +262,44 @@ function dataReceivedClientSocketHandler(data) {
     }
 }
 function processReceivedJsonObjects(jsonObject) {
-    let request = jsonObject['request'];
-    // console.log(request)
-    if(request=='basic_info'){
-        for(let key in jsonObject['data']){
-            basic_info[key]=jsonObject['data'][key];
-        }
-        for(let key in basic_info['machines']){
-            if(basic_info['hmiSettings']['cm_ip_address']==basic_info['machines'][key]['maintenance_gui_ip']){
-                basic_info['selectedMachineId']=basic_info['machines'][key]['machine_id'];
-            }
-        }
-        let doors={}
-        for(let key in basic_info['inputs']){
-            let input=basic_info['inputs'][key];
-            if(input['device_type']==6){
-                if(!doors[input['device_number']]){
-                    doors[input['device_number']]={}
-                }
-                doors[input['device_number']][input['device_fct']]=input;
-            }
-        }
-        basic_info['doors']=doors;
-        changeMenu({})
-    }
-    else if(request=='getLoginUser'){
-        if(jsonObject['data']['status']){
-            let currentUser=jsonObject['data']['user'];
-            basic_info['currentUser']=currentUser;
-            menu = Menu.buildFromTemplate(getMenu());
-            Menu.setApplicationMenu(menu);
-            changeMenu({'currentMenu':settingsPage})
-        }
-        mainWindow.webContents.send(request,jsonObject);
-    }
-    else{
-        mainWindow.webContents.send(request,jsonObject);
-    }
+    //TODO
+    //let request = jsonObject['request'];
+    console.log(jsonObject)
+    // if(request=='basic_info'){
+    //     for(let key in jsonObject['data']){
+    //         basic_info[key]=jsonObject['data'][key];
+    //     }
+    //     for(let key in basic_info['machines']){
+    //         if(basic_info['hmiSettings']['cm_ip_address']==basic_info['machines'][key]['maintenance_gui_ip']){
+    //             basic_info['selectedMachineId']=basic_info['machines'][key]['machine_id'];
+    //         }
+    //     }
+    //     let doors={}
+    //     for(let key in basic_info['inputs']){
+    //         let input=basic_info['inputs'][key];
+    //         if(input['device_type']==6){
+    //             if(!doors[input['device_number']]){
+    //                 doors[input['device_number']]={}
+    //             }
+    //             doors[input['device_number']][input['device_fct']]=input;
+    //         }
+    //     }
+    //     basic_info['doors']=doors;
+    //     changeMenu({})
+    // }
+    // else if(request=='getLoginUser'){
+    //     if(jsonObject['data']['status']){
+    //         let currentUser=jsonObject['data']['user'];
+    //         basic_info['currentUser']=currentUser;
+    //         menu = Menu.buildFromTemplate(getMenu());
+    //         Menu.setApplicationMenu(menu);
+    //         changeMenu({'currentMenu':settingsPage})
+    //     }
+    //     mainWindow.webContents.send(request,jsonObject);
+    // }
+    // else{
+    //     mainWindow.webContents.send(request,jsonObject);
+    // }
 }
 clientSocket.on('connect', connectClientSocketHandler);
 clientSocket.on('data',    dataReceivedClientSocketHandler);
@@ -311,7 +311,7 @@ clientSocket.on('close',   closeClientSocketHandler);
 
 ipcMain.on("sendRequestToServer", function(e, responseName,params,requestData=[]) {
     params['machine_id']=basic_info['selectedMachineId']//including machine_id
-    sendRequestToServer({"request" :responseName,'params':params,"requestData":requestData});//temporary machineId
+    sendRequestToServer({"request" :responseName,'params':params,"requestData":requestData});
 })
 app.whenReady().then(() => {
     createWindow()
