@@ -188,7 +188,7 @@ ipcRenderer.on("basic_info", function(e, data) {
             let requestData=[
                 {'name':'machine_mode','params':{}},
                 {'name':'disconnected_device_counter','params':{}},
-                {'name':'active_alarms','params':{}}
+                {'name':'alarms_active','params':{}}
             ];
             ipcRenderer.send("sendRequestToServer", "getCommonStatus",{},requestData);//send request now
             setInterval(() => {ipcRenderer.send("sendRequestToServer", "getCommonStatus",{},requestData);}, 2000);
@@ -196,7 +196,6 @@ ipcRenderer.on("basic_info", function(e, data) {
         else{
             $('.system_machine_info').hide();
             $('.system_machine_info[data-selected=0]').show();
-
         }
     }
     if (typeof systemPageLoaded === 'function') {
@@ -204,8 +203,9 @@ ipcRenderer.on("basic_info", function(e, data) {
     }
 })
 ipcRenderer.on("getCommonStatus", function(e, jsonObject) {
-    console.log("TODO getCommonStatus")
+    console.log("TODO getCommonStatus",jsonObject)
     let disconnected_device_counter = Number(jsonObject['data']['disconnected_device_counter']);
+    //console.log(disconnected_device_counter)
     if(disconnected_device_counter != 0) {
         $("#system_machine_status").css("color", "#FFBF00");
     }

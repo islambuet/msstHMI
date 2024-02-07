@@ -48,7 +48,6 @@ let basic_info={
     'currentMenu':generalPage,
     'selectedMachineId':0,
     'pageParams':{},
-    'systemConstants':{},
     'hmiSettings':getHMISettings()
 }
 
@@ -201,7 +200,7 @@ function connectClientSocketHandler() {
     basic_info['connected']=true;
     //immediate sending request does not receive by server
     setTimeout(function (){
-        sendRequestToServer({"request" :'getSystemConstants','params':{},"requestData":[]});
+        sendRequestToServer({"request" :'dbBasicInfo','params':{},"requestData":[]});
     }, 100);
 
 }
@@ -262,44 +261,43 @@ function dataReceivedClientSocketHandler(data) {
     }
 }
 function processReceivedJsonObjects(jsonObject) {
-    //TODO
-    //let request = jsonObject['request'];
-    console.log(jsonObject)
-    // if(request=='basic_info'){
-    //     for(let key in jsonObject['data']){
-    //         basic_info[key]=jsonObject['data'][key];
-    //     }
-    //     for(let key in basic_info['machines']){
-    //         if(basic_info['hmiSettings']['cm_ip_address']==basic_info['machines'][key]['maintenance_gui_ip']){
-    //             basic_info['selectedMachineId']=basic_info['machines'][key]['machine_id'];
-    //         }
-    //     }
-    //     let doors={}
-    //     for(let key in basic_info['inputs']){
-    //         let input=basic_info['inputs'][key];
-    //         if(input['device_type']==6){
-    //             if(!doors[input['device_number']]){
-    //                 doors[input['device_number']]={}
-    //             }
-    //             doors[input['device_number']][input['device_fct']]=input;
-    //         }
-    //     }
-    //     basic_info['doors']=doors;
-    //     changeMenu({})
-    // }
-    // else if(request=='getLoginUser'){
-    //     if(jsonObject['data']['status']){
-    //         let currentUser=jsonObject['data']['user'];
-    //         basic_info['currentUser']=currentUser;
-    //         menu = Menu.buildFromTemplate(getMenu());
-    //         Menu.setApplicationMenu(menu);
-    //         changeMenu({'currentMenu':settingsPage})
-    //     }
-    //     mainWindow.webContents.send(request,jsonObject);
-    // }
-    // else{
-    //     mainWindow.webContents.send(request,jsonObject);
-    // }
+
+    let request = jsonObject['request'];
+    if(request=='dbBasicInfo'){
+        for(let key in jsonObject['data']){
+            basic_info[key]=jsonObject['data'][key];
+        }
+        for(let key in basic_info['machines']){
+            if(basic_info['hmiSettings']['cm_ip_address']==basic_info['machines'][key]['maintenance_gui_ip']){
+                basic_info['selectedMachineId']=basic_info['machines'][key]['machine_id'];
+            }
+        }
+        let doors={}
+        for(let key in basic_info['inputs']){
+            let input=basic_info['inputs'][key];
+            if(input['device_type']==6){
+                if(!doors[input['device_number']]){
+                    doors[input['device_number']]={}
+                }
+                doors[input['device_number']][input['device_fct']]=input;
+            }
+        }
+        basic_info['doors']=doors;
+        changeMenu({})
+    }
+    else if(request=='getLoginUser'){
+        if(jsonObject['data']['status']){
+            let currentUser=jsonObject['data']['user'];
+            basic_info['currentUser']=currentUser;
+            menu = Menu.buildFromTemplate(getMenu());
+            Menu.setApplicationMenu(menu);
+            changeMenu({'currentMenu':settingsPage})
+        }
+        mainWindow.webContents.send(request,jsonObject);
+    }
+    else{
+        mainWindow.webContents.send(request,jsonObject);
+    }
 }
 clientSocket.on('connect', connectClientSocketHandler);
 clientSocket.on('data',    dataReceivedClientSocketHandler);
