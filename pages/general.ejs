@@ -18,7 +18,8 @@
     /* global ipcRenderer */
     function systemPageLoaded(){
         if(basic_info['connected']){
-
+            $('[data-toggle="tooltip"]').tooltip();
+            $('.photoeye .status').css('fill','#f7931e');
         }
     }
 </script>

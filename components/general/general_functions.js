@@ -4,6 +4,11 @@
 // ---------------
 /* global basic_info */
 /* global ipcRenderer */
+
+$(document).on('click','#btn_legend',function (event){
+    //window.open('components/general/general_colors.svg', '_blank', 'top=0,left=0')
+    ipcRenderer.send("sendRequestToIpcMain", "showChildWindow",{'name':'legend'});
+})
 $('#switch_legend_production').change(function () {
     if ($(this).is(":checked")) {
         $('#svg_general_colors').hide();

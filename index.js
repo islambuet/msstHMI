@@ -152,6 +152,20 @@ ipcMain.on("sendRequestToIpcMain", function(e, responseName,params={}) {
     else if(responseName=='changeMenu'){
         changeMenu(params)
     }
+    else if(responseName=='showChildWindow'){
+        const child = new BrowserWindow({
+            parent: mainWindow,
+            width: 800,
+            height: 180,
+            resizable: false,
+            minimizable:false,
+            movable:true,
+            closable:true
+        })
+
+        child.loadFile('components/general/general_colors.svg')
+        child.show()
+    }
     else if(responseName=='logout'){
         logoutUser();
     }
