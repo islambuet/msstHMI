@@ -157,12 +157,20 @@ ipcMain.on("sendRequestToIpcMain", function(e, responseName,params={}) {
             parent: mainWindow,
             width: 800,
             height: 180,
-            resizable: false,
+            resizable: !app.isPackaged,
             minimizable:false,
             movable:true,
-            closable:true
-        })
+            closable:true,
 
+        })
+        if(!app.isPackaged){
+            child.setMenu( Menu.buildFromTemplate( [
+                { role: 'toggleDevTools' },
+            ]));
+        }
+        else{
+            child.setMenu(null)
+        }
         child.loadFile('components/general/general_colors.svg')
         child.show()
     }
