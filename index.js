@@ -132,14 +132,12 @@ function changeMenu(params){
 }
 function logoutUser() {
     mainWindow.closable=false;
-    //TODO start
-    // let params={
-    //     'machine_id':basic_info['selectedMachineId'],
-    //     'message_id':120,
-    //     'mode':0
-    // };
-    // sendRequestToServer({"request" :'forward_ape_message','params':params,"requestData":[]});
-    //TODO end
+    let params={
+        'machine_id':basic_info['selectedMachineId'],
+        'message_id':120,
+        'mode':0
+    };
+    sendRequestToServer({"request" :'forwardSMMessage','params':params,"requestData":[]});
     basic_info['currentUser']=unRegisteredUser;
     menu = Menu.buildFromTemplate(getMenu());
     Menu.setApplicationMenu(menu);
