@@ -110,7 +110,7 @@ const createWindow = () => {
         minimizable:!app.isPackaged,
         movable:!app.isPackaged,
         closable:!app.isPackaged,
-        x:app.isPackaged?0:1921,
+        x:app.isPackaged?0:2561,
         y:0,
         webPreferences: {
             nodeIntegration: true,
