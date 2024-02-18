@@ -137,7 +137,6 @@
             let machine=basic_info['machines'][basic_info['selectedMachineId']];
             $('#site_name').text(machine['site_name']);
             $('#machine_name').text(machine['machine_name']);
-            //$('#install_date').text(machine['install_at']);
             $('#install_date').text(moment(machine['install_at']).format('MMM D Y, H:mm:ss'))
         }
         if(basic_info['currentUser']['role']==1){
@@ -147,14 +146,14 @@
             let html='<tr>' +
                 '<td style="text-align: center">' + item['param_id'] + '</td>' +
                 '<td>' + item['description'] + '</td>' +
-                '<td style="text-align: right" id="param_value_id_'+item['param_id']+'">' + item['value'] + '</td>' +
+                '<td class="param-value" style="text-align: right" data-param-id="'+item['param_id']+'">' + item['value'] + '</td>' +
                 '<td>' + item['unit'] + '</td>' +
                 '<td>'+
                 ((basic_info['currentUser']['role'] == 1 || basic_info['currentUser']['role'] == 2) ?
                         '<div class="input-group">' +
-                        '<input id="input_send_set_param_command_'+item['param_id']+'" type="text" class="form-control integer_positive">' +
+                        '<input class="param_command_value form-control integer_positive"  data-param-id="'+item['param_id']+'" type="text" >' +
                         '<div class="input-group-append">' +
-                        '<button data-param_id="'+item['param_id']+'" class="btn btn-primary btn-sm btn_send_set_param_command">change</button>' +
+                        '<button data-param-id="'+item['param_id']+'" class="param_command_button btn btn-primary btn-sm">change</button>' +
                         '</div>' +
                         '</div>':''
                 )+
@@ -174,8 +173,6 @@
                 $('#table_parameters_singulator tbody').append(html)
             }
 
-            $('#param_unit_id_'+item['param_id']).text(item['unit'])
-
         });
         if(basic_info['connected']){
             requestPageData();
@@ -184,26 +181,32 @@
     }
     function requestPageData(){
         let requestData=[
-            {'name':'parameters_value','params':{}},
+            {'name':'parameters_values','params':{}},
             {'name':'counters_current_value','params':{}},
         ];
         ipcRenderer.send("sendRequestToServer", "getMaintParamsData",{},requestData);
     }
-    $(document).on('click','.btn_send_set_param_command',function (event){
-        let param_id=$(this).attr('data-param_id')
-        let value=$('#input_send_set_param_command_'+param_id).val();//not verifying number
-        let params={
-            'message_id':115,
-            'param_id':param_id,
-            'value':value
-        };
-        ipcRenderer.send("sendRequestToServer", "forward_ape_message",params,[]);
+    $(document).on('click','.param_command_button',function (event){
+        let param_id=$(this).attr('data-param-id')
+        let value=parseInt($('.param_command_value[data-param-id="'+param_id+'"]').val());//not verifying number
+        if(value>-1){
+            let params={
+                'message_id':115,
+                'param_id':param_id,
+                'value':value
+            };
+            ipcRenderer.send("sendRequestToServer", "forwardSMMessage",params,[]);
+        }
+        else {
+            console.log("invalid number")
+        }
     })
     ipcRenderer.on("getMaintParamsData", function(e, jsonObject) {
+
         let machine_id=jsonObject['params']['machine_id'];
-        for(let key in jsonObject['data']['parameters_value']){
-            let parameter_info=jsonObject['data']['parameters_value'][key];
-            $('#param_value_id_'+parameter_info['param_id']).text(parameter_info['value'])
+        for(let key in jsonObject['data']['parameters_values']){
+            let parameter_info=jsonObject['data']['parameters_values'][key];
+            $('.param-value[data-param-id="'+parameter_info['param_id']+'"]').text(parameter_info['value'])
         }
         let counterData=jsonObject['data']['counters_current_value'];
         $('.counter-value').each((index, elem) => {
