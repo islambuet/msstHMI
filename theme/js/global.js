@@ -69,7 +69,7 @@ $(document).on('click','.button-device-command',function (event){
         'command':$(this).attr('data-command'),
         'parameter1':$(this).attr('data-parameter1')
     };
-    ipcRenderer.send("sendRequestToServer", "forward_ape_message",params,[]);
+    ipcRenderer.send("sendRequestToServer", "forwardSMMessage",params,[]);
 })
 $(document).on('click','.button-device-command-press-release',function (event){
     let device_id=$(this).attr('data-device-id');

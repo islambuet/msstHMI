@@ -8,6 +8,19 @@
     </div>
 </div>
 <div class="row mt-2">
+    <div class="col-12">
+        <button id="params_export_btn" class="btn btn-primary">Export</button>
+        <button id="params_import_btn" class="btn btn-danger">Import</button>
+        <input type="file"accept=".csv" class="form-control d-none" id="params_import_file">
+
+        <div style="display: inline-block;">
+            <img id="system_loading" style="display: none;" src="theme/images/loading.gif" alt="Loading">
+            <span id="file_name_container"></span>
+            <span id="alert_message"></span>
+        </div>
+    </div>
+</div>
+<div class="row mt-2">
     <div class="col-lg-6">
         <h3>Threshold Parameters</h3>
         <div style="display: block; overflow-y: auto; height: 238px">
@@ -92,12 +105,12 @@
             <tbody>
             <tr>
                 <td>Power Turn Tracking Window</td>
-                <td style="text-align: right;width:22%"><span id="param_value_id_60" ></span><span id="param_unit_id_60"></span></td>
-                <td style="text-align: right;width:22%"><span id="param_value_id_61" ></span><span id="param_unit_id_61"></span></td>
+                <td style="text-align: right;width:22%"><span class="param-value" data-param-id="60"></span><span class="param-unit" data-param-id="60"></span></td>
+                <td style="text-align: right;width:22%"><span  class="param-value" data-param-id="61"></span><span class="param-unit" data-param-id="61"></span></td>
             </tr>
             <tr>
                 <td>Reject Position</td>
-                <td style="text-align: right;width:22%"><span id="param_value_id_62" ></span><span id="param_unit_id_62"></span></td>
+                <td style="text-align: right;width:22%"><span  class="param-value" data-param-id="62" ></span><span class="param-unit" data-param-id="62"></span></td>
                 <td>&nbsp;</td>
             </tr>
             </tbody>
@@ -172,6 +185,7 @@
             else if (item['param_id'] >99 && item['param_id'] < 110) {
                 $('#table_parameters_singulator tbody').append(html)
             }
+            $('.param-unit[data-param-id="'+item['param_id']+'"]').text(item['unit'])//for fixed type params
 
         });
         if(basic_info['connected']){
@@ -216,6 +230,128 @@
             }
         })
 
+    })
+    $(document).on('click','#params_export_btn',function (event){
+        let requestData=[
+            {'name':'parameters_values','params':{}},
+        ];
+        ipcRenderer.send("sendRequestToServer", "getParamsValue",{},requestData);
+    })
+    ipcRenderer.on("getParamsValue", function(e, jsonObject) {
+        console.log(jsonObject['data']['parameters_values'])
+        let machine_id=jsonObject['params']['machine_id'];
+        let csvStr='';
+        let parameters = Object.values(basic_info['parameters']).sort((a, b) => a['param_id'] - b['param_id']);
+        for(let key in parameters){
+            let record=parameters[key];
+            csvStr=csvStr+'"'+record['machine_id']+'";';
+            csvStr=csvStr+'"'+record['param_id']+'";';
+            csvStr=csvStr+'"'+record['description']+'";';
+            csvStr=csvStr+'"'+jsonObject['data']['parameters_values'][record['machine_id']+'_'+record['param_id']]['value']+'";';
+            csvStr=csvStr+'"'+record['unit']+'";';
+            csvStr=csvStr+'"'+record['value_min']+'";';
+            csvStr=csvStr+'"'+record['value_max']+'"\n';
+        }
+        let hiddenElement = document.createElement('a');
+        hiddenElement.href = 'data:text/csv;charset=utf-8,' + encodeURIComponent(csvStr);
+        hiddenElement.target = '_blank';
+        hiddenElement.download = 'parameters.csv';
+        hiddenElement.click();
+    })
+    $(document).on('click','#params_import_btn',function (event){
+        $('#params_import_file').val('');
+        $('#system_loading').hide();
+        $('#file_name_container').html('');
+        $('#alert_message').html('');
+        $('#params_import_file').trigger('click');
+    })
+    $("#params_import_file").on("change", function() {
+
+        let fileName = $(this).val().split("\\").pop();
+        if(fileName){
+            $('#file_name_container').html("<span class='ml-1'> FileName: "+fileName+"</span>")
+            $('#system_loading').show()
+            $('#alert_message').html()
+            let file=this.files[0];
+            if(file.size>10000){
+                $('#alert_message').html("<span class='text-danger'> Invalid FileSize: "+file.size+"</span>")
+                $('#system_loading').hide()
+            }
+            else{
+                let parameters = basic_info['parameters'];
+                const reader = new FileReader()
+                reader.onload = function (e) {
+                    const text = e.target.result;
+                    let csvData=[];
+                    let rows=text.split(/\r\n|\n/);
+                    let errorStr='';
+                    for(let key in rows)
+                    {
+                        let row=rows[key];
+                        if(!row)continue;
+                        let cols=row.split(";")
+                        if(cols.length!=7){
+                            errorStr="<span class='text-danger'>Invalid ColLength. line: "+key+" length: "+cols.length+"</span>"
+                            break;
+                        }
+                        let machine_id=parseInt(cols[0].slice(1, -1));
+                        let param_id=parseInt(cols[1].slice(1, -1));
+                        let value=parseInt(cols[3].slice(1, -1));
+                        if(parameters[machine_id+'_'+param_id]){
+                            let parameter=parameters[machine_id+'_'+param_id];
+                            if(value<parameter['value_min']){
+                                errorStr="<span class='text-danger'>Value is lower than min value. line: "+key+" value_min: "+parameter['value_min']+" value: "+value+"</span>"
+                                break;
+                            }
+                            if(value>parameter['value_max']){
+                                errorStr="<span class='text-danger'>Value is higher than max value. line: "+key+" value_max: "+parameter['value_max']+" value: "+value+"</span>"
+                                break;
+                            }
+                            csvData.push({'machine_id':machine_id,'param_id':param_id,'value':value})
+                        }
+                        else{
+                            errorStr="<span class='text-danger'>Invalid Parameter. line: "+key+"</span>"
+                            break;
+                        }
+                    }
+                    if(errorStr){
+                        $('#alert_message').html(errorStr);
+                        $('#system_loading').hide()
+                    }
+                    else{
+                        if(csvData.length<1){
+                            $('#alert_message').html("<span class='text-danger'>Data Not Found</span>")
+                            $('#system_loading').hide()
+                        }
+                        else{
+                            let requestData=[
+                                {'name':'parameters_values_import','params':{'csvData':csvData}},
+                            ];
+                            ipcRenderer.send("sendRequestToServer", "ImportParametersValue",{},requestData);
+                        }
+                    }
+                };
+                reader.readAsText(file)
+            }
+
+        }
+    });
+    ipcRenderer.on("ImportParametersValue", function(e, jsonObject) {
+        let totalRowChanged=jsonObject['data']['parameters_values_import']['totalRowChanged'];
+        if(totalRowChanged>-1){
+            if(totalRowChanged>0){
+                $('#alert_message').html("<span class='text-success'>"+totalRowChanged+" Parameters value updated.</span>")
+            }
+            else{
+                $('#alert_message').html("<span class='text-success'>No Change value found.</span>")
+            }
+
+        }
+        else{
+            $('#alert_message').html("<span class='text-danger'>Params Upload Failed</span>")
+        }
+
+        $('#system_loading').hide()
     })
 
 </script>
