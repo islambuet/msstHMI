@@ -69,22 +69,22 @@
         changeInput()
         changeOutput()
         if(basic_info['connected']){
-            requestInputOutputStatus();
-            setInterval(() => {requestInputOutputStatus()}, 2000);
+            requestPageData();
+            setInterval(() => {requestPageData()}, 1000);
         }
     }
-    function requestInputOutputStatus(){
+    function requestPageData(){
         let requestData=[
-            {'name':'input_states','params':{}},
-            {'name':'output_states','params':{}},
+            {'name':'inputs_states','params':{}},
+            {'name':'outputs_states','params':{}},
         ];
         ipcRenderer.send("sendRequestToServer", "getInputOutputStatusData",{},requestData);
     }
     function changeInput(){
         let board_id=$('#select_input_board').val()
-        let board_ios = Object.values(basic_info['board_ios']).filter(b => b['board_id'] == board_id);
+        let boards_io = Object.values(basic_info['boards_io']).filter(b => b['board_id'] == board_id);
         $('#table_inputs tbody').empty();
-        board_ios.forEach(b => {
+        boards_io.forEach(b => {
             let html='<tr>' +
                 '<td>' + b['in'] + '</td>' +
                 '<td>' + b['description'] + '</td>' +
@@ -97,9 +97,9 @@
     }
     function changeOutput(){
         let board_id=$('#select_output_board').val()
-        let board_ios = Object.values(basic_info['board_ios']).filter(b => b['board_id'] == board_id);
+        let boards_io = Object.values(basic_info['boards_io']).filter(b => b['board_id'] == board_id);
         $('#table_outputs tbody').empty();
-        board_ios.forEach(b => {
+        boards_io.forEach(b => {
             let html='<tr>' +
                 '<td>' + b['in'] + '</td>' +
                 '<td>' + b['description'] + '</td>' +
@@ -109,7 +109,7 @@
                 '<td>'+
                 (Number(b['change_allowed'])==1?
                         '<div class="input-group">' +
-                        '<input id="input_send_device_command_'+b['output_id']+'" type="text" class="form-control input_send_device_command">' +
+                        '<input id="input_send_device_command_'+b['output_id']+'" type="text" class="form-control integer_positive input_send_device_command">' +
                         '<div class="input-group-append">' +
                         '<button data-parameter1="'+b['output_id']+'" class="btn btn-primary btn-sm btn_send_device_command">change</button>' +
                         '</div>' +
@@ -123,31 +123,33 @@
     }
     $(document).on('change','#select_input_board',function (event){
         changeInput()
-        requestInputOutputStatus();
+        requestPageData();
     });
     $(document).on('change','#select_output_board',function (event){
         changeOutput()
-        requestInputOutputStatus();
+        requestPageData();
     });
 
     $(document).on('click','.btn_send_device_command',function (event){
         let parameter1=$(this).attr('data-parameter1')
         let command=$('#input_send_device_command_'+parameter1).val();//not verifying number
-        let params={
-            'message_id':123,
-            'device_id':99,
-            'command':command,
-            'parameter1':parameter1
-        };
-        ipcRenderer.send("sendRequestToServer", "forward_ape_message",params,[]);
+        if(command!='' && !isNaN(command)){
+            let params={
+                'message_id':123,
+                'device_id':99,
+                'command':command,
+                'parameter1':parameter1
+            };
+            ipcRenderer.send("sendRequestToServer", "forwardSMMessage",params,[]);
+        }
     })
     ipcRenderer.on("getInputOutputStatusData", function(e, jsonObject) {
-        for(let key in jsonObject['data']['input_states']){
-            let input_state=jsonObject['data']['input_states'][key];
+        for(let key in jsonObject['data']['inputs_states']){
+            let input_state=jsonObject['data']['inputs_states'][key];
             $('#status_input_io_'+input_state['input_id']).css('background-color',(input_state['state']==1)?'#4fe21f':'#9e9e9e')
         }
-        for(let key in jsonObject['data']['output_states']){
-            let output_state=jsonObject['data']['output_states'][key];
+        for(let key in jsonObject['data']['outputs_states']){
+            let output_state=jsonObject['data']['outputs_states'][key];
             $('#status_output_io_'+output_state['output_id']).css('background-color',(output_state['state']==1)?'#4fe21f':'#9e9e9e')
         }
     })
