@@ -63,17 +63,17 @@
     }
     function requestPageData(){
         let requestData=[
-            {'name':'device_states','params':{}}
+            {'name':'devices_states','params':{}}
         ];
-        ipcRenderer.send("sendRequestToServer", "getMaintMotorData",{},requestData);
+        ipcRenderer.send("sendRequestToServer", "getMaintDevicesData",{},requestData);
     }
-    ipcRenderer.on("getMaintMotorData", function(e, jsonObject) {
+    ipcRenderer.on("getMaintDevicesData", function(e, jsonObject) {
         let machine_id=jsonObject['params']['machine_id'];
-        let device_states=jsonObject['data']['device_states']
+        let devices_states=jsonObject['data']['devices_states']
         $('.device-status').each((index, elem) => {
             let device_id=$(elem).attr('data-device-id');
-            if(device_states[machine_id+'_'+device_id]!=undefined){
-                if(device_states[machine_id+'_'+device_id]['state']==1){
+            if(devices_states[machine_id+'_'+device_id]!=undefined){
+                if(devices_states[machine_id+'_'+device_id]['state']==1){
                     $(elem).css('background-color', "#4fe21f");
                 }
                 else{
