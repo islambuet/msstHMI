@@ -107,24 +107,24 @@
     }
     function requestPageData(){
         let requestData=[
-            {'name':'output_states','params':{}},
+            {'name':'outputs_states','params':{}},
             {'name':'counters_current_value','params':{}},
         ];
         ipcRenderer.send("sendRequestToServer", "getMaintSortData",{},requestData);
     }
     ipcRenderer.on("getMaintSortData", function(e, jsonObject) {
         let machine_id=jsonObject['params']['machine_id'];
-        let counterData=jsonObject['data']['counters_current_value'];
+        let countersData=jsonObject['data']['counters_current_value'];
         $('.counter-value').each((index, elem) => {
             let counter_id=$(elem).attr('data-counter-id');
-            if(counterData[machine_id+'_'+counter_id]!=undefined){
-                $(elem).text(counterData[machine_id+'_'+counter_id])
+            if(countersData[machine_id+'_'+counter_id]!=undefined){
+                $(elem).text(countersData[machine_id+'_'+counter_id])
             }
         })
 
-        let output_states=jsonObject['data']['output_states'];
-        if(output_states[machine_id+"_52"] !=undefined){
-            if(output_states[machine_id+"_52"]['state']==1) {
+        let outputs_states=jsonObject['data']['outputs_states'];
+        if(outputs_states[machine_id+"_52"] !=undefined){
+            if(outputs_states[machine_id+"_52"]['state']==1) {
                 $('#btn_fansort_enable').hide();
                 $("#btn_fansort_disable").show();
             }
