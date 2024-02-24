@@ -39,6 +39,7 @@
     /* global basic_info */
     /* global ipcRenderer */
     /* global getPaginationHtml */
+    /* global secondsToDhms */
     let dataTable= $('#table_datatable').DataTable({
         //dom: 'Bifrtp',
         dom: '<Bif>rtp',
@@ -70,21 +71,21 @@
     function requestPageData(){
         if(!($('#chk_refresh_disable').is(":checked"))) {
             let requestData=[
-                {'name':'active_alarms','params':{}},
+                {'name':'alarms_active','params':{}},
             ];
             ipcRenderer.send("sendRequestToServer", "getAlarmsViewData",{},requestData);
         }
     }
     ipcRenderer.on("getAlarmsViewData", function(e, jsonObject) {
         let machine_id=jsonObject['params']['machine_id'];
-        let active_alarms=jsonObject['data']['active_alarms']
+        let alarms_active=jsonObject['data']['alarms_active']
         let alarms=basic_info['alarms']
         let alarm_class_names = {"0" : "Error", "1" : "Warning", "2" : "Message"};
 
         let now_timestamp=moment().unix();
         dataTable.clear().draw();
 
-        active_alarms.forEach(record => {
+        alarms_active.forEach(record => {
             let key=machine_id+'_'+record['alarm_id']+'_'+record['alarm_type'];
             if(alarms[key]!=undefined){
                 dataTable.row.add([
