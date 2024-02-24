@@ -91,6 +91,7 @@
     /* global basic_info */
     /* global ipcRenderer */
     /* global getPaginationHtml */
+    /* global secondsToDhms */
     let dataTable= $('#table_datatable').DataTable({
         //dom: 'Bifrtp',
         dom: '<Bif>rtp',
@@ -136,14 +137,31 @@
             format: 'mm-dd-yyyy',
             orientation: "bottom right",
         });
-        $('#from_date').datepicker('update', moment().subtract(6, 'days').format('MM-DD-YYYY'));
-        $('#button_filter').trigger('click')
+        let requestData=[
+            {'name':'statistics_counter','params':{'per_page':1}},
+        ];
+        ipcRenderer.send("sendRequestToServer", "getStatisticsCounterLast",{},requestData);//send request now
     }
+    ipcRenderer.on("getStatisticsCounterLast", function(e, jsonObject) {
+        if(jsonObject['data']['statistics_counter']['records'].length>0){
+            let startDate=moment(jsonObject['data']['statistics_counter']['records'][0]['created_at_timestamp']*1000);
+            $('#from_date_hour').val((startDate.hour()<10?"0":"")+startDate.hour())
+            $('#from_date_minute').val((startDate.minute()<10?"0":"")+startDate.minute())
+            $('#from_date').datepicker('update', startDate.format('MM-DD-YYYY'));
+            current_page=1;
+            $('#button_filter').trigger('click')
+        }
+        else{
+            let error_message = "<b>Please Contact with admin. No Schedule found</b>";
+            $("#alert_message").html(error_message);
+            $("#alert_message_container").show();
+        }
+    })
     $(document).on('click','#button_filter',function (event){
-        filterAlarm();
+        filterRecords();
     })
 
-    function filterAlarm(){
+    function filterRecords(){
         $("#alert_message_container").hide();
         let from_timestamp = moment($('#from_date').val()+" "+$("#from_date_hour").val()+":"+$("#from_date_minute").val(), "MM-DD-YYYY HH:mm").unix();
         let to_timestamp = moment($('#to_date').val()+" "+$("#to_date_hour").val()+":"+$("#to_date_minute").val(), "MM-DD-YYYY HH:mm").unix();
@@ -191,11 +209,11 @@
     ipcRenderer.on("getAlarmsHitList", function(e, jsonObject) {
         $('#system_loading').hide()
         let alarms=basic_info['alarms']
-        let active_alarms=jsonObject['data']['alarms_hit_list']['records']
+        let alarms_hit_list=jsonObject['data']['alarms_hit_list']['records']
         let alarm_class_names = {"0" : "Error", "1" : "Warning", "2" : "Message"};
         dataTable.clear().draw();
-        for(let key in active_alarms){
-            let record=active_alarms[key]
+        for(let key in alarms_hit_list){
+            let record=alarms_hit_list[key]
             if(alarms[key]!=undefined){
                 dataTable.row.add([
                     moment.unix(record['date_active_timestamp']).format("MMM D Y, H:mm:ss"),
