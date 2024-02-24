@@ -117,7 +117,7 @@
                         'command':1,
                         'parameter1':speed
                     };
-                    ipcRenderer.send("sendRequestToServer", "forward_ape_message",params,[]);
+                    ipcRenderer.send("sendRequestToServer", "forwardSMMessage",params,[]);
                 }
             }
         })
@@ -129,7 +129,7 @@
                 'command':0,
                 'parameter1':0
             };
-            ipcRenderer.send("sendRequestToServer", "forward_ape_message",params,[]);
+            ipcRenderer.send("sendRequestToServer", "forwardSMMessage",params,[]);
         })
 
         if(basic_info['connected']){
@@ -141,13 +141,14 @@
         let requestData=[
             {'name':'machine_mode','params':{}},
             {'name':'motors_current_speed','params':{}},
-            {'name':'input_states','params':{}},
-            {'name':'active_alarms','params':{}},
-            {'name':'device_states','params':{}}
+            {'name':'devices_states','params':{}},
+            {'name':'inputs_states','params':{}},
+            {'name':'alarms_active','params':{}},
         ];
         ipcRenderer.send("sendRequestToServer", "getMaintMotorData",{},requestData);
     }
     ipcRenderer.on("getMaintMotorData", function(e, jsonObject) {
+        //console.log(jsonObject)
         let machine_id=jsonObject['params']['machine_id'];
         if(jsonObject['data']['machine_mode'] == 1) {
             $('.input_motor_speed_container').show();
@@ -158,11 +159,11 @@
 
         let motor_speeds = jsonObject['data']['motors_current_speed']
         let motor_speed_unit = basic_info['hmiSettings']['motor_speed_unit'];
-        let input_states=jsonObject['data']['input_states']
-        let device_states=jsonObject['data']['device_states']
-        let active_alarms={};
-        jsonObject['data']['active_alarms'].forEach(alarm => {
-            active_alarms[alarm['alarm_id']+'_'+alarm['alarm_type']]=1;
+        let inputs_states=jsonObject['data']['inputs_states']
+        let devices_states=jsonObject['data']['devices_states']
+        let alarms_active={};
+        jsonObject['data']['alarms_active'].forEach(alarm => {
+            alarms_active[alarm['alarm_id']+'_'+alarm['alarm_type']]=1;
         })
         let inputs=basic_info['inputs']
         let motors = Object.values(basic_info['motors']);
@@ -182,21 +183,21 @@
             let faulted_status='#9e9e9e';
             if(motor['input_id']>0){
                 if(inputs[machine_id+'_'+motor['input_id']] !=undefined){
-                    if((input_states[machine_id+'_'+motor['input_id']]['state'])==inputs[machine_id+'_'+motor['input_id']]['active_state']){
+                    if((inputs_states[machine_id+'_'+motor['input_id']]['state'])==inputs[machine_id+'_'+motor['input_id']]['active_state']){
                         status='#27e22b';
                         faulted_status='#27e22b';
                     }
                 }
             }
             if(motor['alarm_id']>0){
-                if(active_alarms[motor['alarm_id']+'_'+motor['alarm_type']]!=undefined){
+                if(alarms_active[motor['alarm_id']+'_'+motor['alarm_type']]!=undefined){
                     status='#f00';
                     faulted_status='#f00';
                 }
             }
             if(motor['device_number']>0){
-                if(device_states[machine_id+'_'+motor['device_number']]!=undefined){
-                    if(device_states[[machine_id+'_'+motor['device_number']]]['state']==1){
+                if(devices_states[machine_id+'_'+motor['device_number']]!=undefined){
+                    if(devices_states[[machine_id+'_'+motor['device_number']]]['state']==1){
                         cnx_status='#27e22b';//connected
                     }
                     else{
